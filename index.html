@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Termômetro de Ciclo — BTC</title>
+<meta name="theme-color" content="#0D1220">
+<link rel="manifest" href="./manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0D1220; --surface:#151D30; --surface2:#1C2740; --line:#26334D;
+    --text:#E8ECF5; --muted:#7C8CA8; --faint:#4E5D78;
+    --cold:#2DB6A3; --warm:#E8C547; --hot:#E5484D;
+    --up:#34C77B; --down:#E5484D;
+    --display:"Space Grotesk",system-ui,sans-serif;
+    --body:"Inter",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,monospace;
+    --r:14px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--text); font-family:var(--body);
+    -webkit-font-smoothing:antialiased; line-height:1.5;
+    padding:env(safe-area-inset-top) 0 calc(48px + env(safe-area-inset-bottom));
+  }
+  .wrap{max-width:900px;margin:0 auto;padding:20px 16px}
+
+  /* ---------------------------------------------------- cabeçalho */
+  header{display:flex;justify-content:space-between;align-items:baseline;
+    gap:12px;flex-wrap:wrap;margin-bottom:22px}
+  .eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--faint)}
+  h1{font-family:var(--display);font-weight:700;font-size:17px;letter-spacing:-.01em}
+  #stamp{font-family:var(--mono);font-size:11px;color:var(--muted);text-align:right}
+
+  /* ---------------------------------------------------- herói */
+  .hero{background:var(--surface);border:1px solid var(--line);
+    border-radius:var(--r);padding:22px 20px 18px;margin-bottom:14px}
+  .px{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+  .px b{font-family:var(--display);font-weight:700;font-size:38px;letter-spacing:-.02em;
+    font-variant-numeric:tabular-nums}
+  .deltas{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;
+    font-family:var(--mono);font-size:12px;color:var(--muted)}
+  .deltas span b{font-weight:600}
+
+  /* -------------------------------- SIGNATURE: termômetro de ciclo */
+  .thermo{margin-top:26px;padding-top:22px;border-top:1px solid var(--line)}
+  .thermo-head{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:14px}
+  .thermo-head .lbl{font-family:var(--mono);font-size:10px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--faint)}
+  .thermo-head .val{font-family:var(--display);font-weight:700;font-size:26px;
+    font-variant-numeric:tabular-nums;line-height:1}
+  .thermo-head .val small{font-size:12px;color:var(--faint);font-weight:500}
+  .bar{position:relative;height:12px;border-radius:99px;
+    background:linear-gradient(90deg,var(--cold) 0%,#4FB98C 30%,var(--warm) 62%,var(--hot) 100%);
+    opacity:.85}
+  .needle{position:absolute;top:-7px;width:3px;height:26px;border-radius:2px;
+    background:var(--text);box-shadow:0 0 0 3px var(--bg);
+    transition:left .8s cubic-bezier(.16,1,.3,1)}
+  .ticks{display:flex;justify-content:space-between;margin-top:9px;
+    font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;
+    text-transform:uppercase;color:var(--faint)}
+  .verdict{margin-top:14px;font-size:13px;color:var(--muted)}
+  .verdict b{color:var(--text);font-weight:600}
+
+  /* ---------------------------------------------------- seções */
+  section{margin-top:26px}
+  h2{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--faint);margin-bottom:11px;display:flex;align-items:center;gap:10px}
+  h2::after{content:"";flex:1;height:1px;background:var(--line)}
+
+  .grid{display:grid;gap:9px;
+    grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+  .cell{background:var(--surface);border:1px solid var(--line);
+    border-radius:11px;padding:12px 13px}
+  .cell .k{font-size:11px;color:var(--muted);margin-bottom:5px;line-height:1.35}
+  .cell .v{font-family:var(--mono);font-weight:600;font-size:17px;
+    font-variant-numeric:tabular-nums}
+  .cell .sub{font-family:var(--mono);font-size:10.5px;color:var(--faint);margin-top:3px}
+
+  /* barrinha das métricas do CBBI */
+  .mini{height:3px;border-radius:99px;background:var(--surface2);margin-top:9px;overflow:hidden}
+  .mini i{display:block;height:100%;border-radius:99px;transition:width .8s cubic-bezier(.16,1,.3,1)}
+
+  /* ---------------------------------------------------- altcoins */
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  thead th{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--faint);font-weight:400;text-align:right;padding:0 0 9px;white-space:nowrap}
+  thead th:first-child{text-align:left}
+  tbody td{padding:11px 0;border-top:1px solid var(--line);text-align:right;
+    font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+  tbody td:first-child{text-align:left;font-family:var(--body);font-weight:600}
+  tbody tr.focus td{background:rgba(45,182,163,.05)}
+  .tag{display:inline-block;margin-left:7px;padding:2px 6px;border-radius:5px;
+    background:rgba(45,182,163,.14);color:var(--cold);
+    font-family:var(--mono);font-size:8.5px;letter-spacing:.06em;vertical-align:1px}
+  .rownote{font-family:var(--body);font-size:11px;color:var(--muted);
+    padding:0 0 11px!important;text-align:left!important;border:0!important}
+  .up{color:var(--up)} .down{color:var(--down)} .nul{color:var(--faint)}
+
+  /* ---------------------------------------------------- calendário */
+  .cal{background:var(--surface);border:1px solid var(--line);
+    border-radius:var(--r);overflow:hidden;min-height:420px}
+
+  /* ---------------------------------------------------- rodapé */
+  .health{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+  .chip{font-family:var(--mono);font-size:10px;padding:4px 9px;border-radius:99px;
+    border:1px solid var(--line);color:var(--muted);background:var(--surface)}
+  .chip.bad{border-color:rgba(229,72,77,.4);color:var(--down)}
+  .chip .dot{display:inline-block;width:5px;height:5px;border-radius:99px;
+    background:var(--up);margin-right:6px;vertical-align:1px}
+  .chip.bad .dot{background:var(--down)}
+  footer{margin-top:30px;padding-top:16px;border-top:1px solid var(--line);
+    font-size:11.5px;color:var(--faint);line-height:1.65}
+
+  .loading{padding:60px 0;text-align:center;color:var(--muted);
+    font-family:var(--mono);font-size:12px}
+
+  @media (max-width:520px){
+    .px b{font-size:31px}
+    .grid{grid-template-columns:repeat(auto-fill,minmax(132px,1fr))}
+    thead th.hide,tbody td.hide{display:none}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+  :focus-visible{outline:2px solid var(--cold);outline-offset:2px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <div class="eyebrow">Fechamento diário · 00:00 UTC · 21h BR</div>
+      <h1>Termômetro de Ciclo</h1>
+    </div>
+    <div id="stamp">carregando…</div>
+  </header>
+
+  <div id="app"><div class="loading">Lendo os dados…</div></div>
+
+  <footer>
+    Dados de CBBI, CoinGecko, Binance, mempool.space, Alternative.me e Stooq.
+    Calendário econômico via TradingView. As leituras de ciclo são indicadores
+    históricos, não previsão — e nada aqui é recomendação de compra ou venda.
+    <div class="health" id="health"></div>
+  </footer>
+</div>
+
+<script>
+const fmtUSD=(v,d)=>v==null?"—":new Intl.NumberFormat("pt-BR",{style:"currency",currency:"USD",
+  minimumFractionDigits:d??(v<1?6:v<100?2:0),maximumFractionDigits:d??(v<1?6:v<100?2:0)}).format(v);
+const fmtN=(v,d=2)=>v==null?"—":new Intl.NumberFormat("pt-BR",{minimumFractionDigits:d,maximumFractionDigits:d}).format(v);
+const fmtPct=(v,d=1)=>v==null?"—":(v>=0?"+":"")+fmtN(v,d)+"%";
+const cls=v=>v==null?"nul":v>=0?"up":"down";
+// Nível (dominância) não leva sinal — só variação leva.
+const fmtLvl=(v,d=1)=>v==null?"—":fmtN(v,d)+"%";
+const big=v=>{if(v==null)return "—";const a=Math.abs(v);
+  if(a>=1e12)return fmtN(v/1e12,2)+" T"; if(a>=1e9)return fmtN(v/1e9,1)+" B";
+  if(a>=1e6)return fmtN(v/1e6,1)+" M"; return fmtN(v,0);};
+
+// Cor do termômetro conforme a temperatura (0 frio → 100 quente).
+function heat(s){
+  if(s==null) return "var(--faint)";
+  if(s<35) return "var(--cold)";
+  if(s<70) return "var(--warm)";
+  return "var(--hot)";
+}
+function verdict(s){
+  if(s==null) return "Score de ciclo indisponível nesta atualização.";
+  if(s<25) return "Zona historicamente <b>fria</b> — territóro de acumulação em ciclos passados.";
+  if(s<50) return "Metade <b>fria</b> da faixa. Sem sinal de sobreaquecimento.";
+  if(s<70) return "Faixa <b>morna</b>. O ciclo esquentou, mas ainda não é extremo.";
+  if(s<85) return "Zona <b>quente</b>. Em ciclos anteriores, região de distribuição.";
+  return "Zona de <b>euforia</b> — historicamente próxima de topos de ciclo.";
+}
+
+function cell(k,v,sub,score){
+  const bar = score!=null
+    ? `<div class="mini"><i style="width:${Math.max(2,Math.min(100,score))}%;background:${heat(score)}"></i></div>` : "";
+  return `<div class="cell"><div class="k">${k}</div><div class="v">${v}</div>
+    ${sub?`<div class="sub">${sub}</div>`:""}${bar}</div>`;
+}
+
+function render(d){
+  const m=d.models||{}, mk=d.market||{}, btc=mk.btc||{}, cb=d.cbbi||{},
+        dv=d.derivatives||{}, fg=d.fear_greed||{}, net=d.network||{}, cy=d.cycle||{};
+
+  document.getElementById("stamp").innerHTML =
+    `atualizado<br>${d.generated_at_br||"—"}`;
+
+  const conf=(cb.confidence||{}).score;
+
+  // ---------- herói + termômetro (o elemento-assinatura)
+  let h=`<div class="hero">
+    <div class="px"><b>${fmtUSD(btc.price,0)}</b>
+      <span class="${cls(btc.chg24h)}" style="font-family:var(--mono);font-size:15px;font-weight:600">
+        ${fmtPct(btc.chg24h)}</span></div>
+    <div class="deltas">
+      <span>7d <b class="${cls(btc.chg7d)}">${fmtPct(btc.chg7d)}</b></span>
+      <span>30d <b class="${cls(btc.chg30d)}">${fmtPct(btc.chg30d)}</b></span>
+      <span>1a <b class="${cls(btc.chg1y)}">${fmtPct(btc.chg1y)}</b></span>
+      <span>do topo <b class="${cls(m.drawdown_from_ath)}">${fmtPct(m.drawdown_from_ath)}</b></span>
+    </div>
+
+    <div class="thermo">
+      <div class="thermo-head">
+        <div class="lbl">Onde estamos no ciclo</div>
+        <div class="val" style="color:${heat(conf)}">
+          ${conf!=null?conf.toFixed(0):"—"}<small>/100</small></div>
+      </div>
+      <div class="bar">
+        <div class="needle" style="left:calc(${conf!=null?Math.max(0,Math.min(100,conf)):50}% - 1.5px)"></div>
+      </div>
+      <div class="ticks"><span>Fundo</span><span>Acumulação</span><span>Aquecendo</span><span>Euforia</span><span>Topo</span></div>
+      <div class="verdict">${verdict(conf)}</div>
+    </div>
+  </div>`;
+
+  // ---------- métricas de ciclo (CBBI)
+  const ordem=["picycle","mvrv","puell","rupl","rhodl","2yma","reserverisk","trolololo","woobull"];
+  const metricas=ordem.filter(k=>cb[k]).map(k=>
+    cell(cb[k].label, cb[k].score.toFixed(0), "0 = fundo · 100 = topo", cb[k].score));
+  if(metricas.length) h+=`<section><h2>Métricas de ciclo</h2>
+    <div class="grid">${metricas.join("")}</div></section>`;
+
+  // ---------- modelos de preço
+  const pi=m.pi_cycle_gap_pct;
+  h+=`<section><h2>Preço contra os modelos</h2><div class="grid">
+    ${cell("Múltiplo de Mayer","x"+fmtN(m.mayer_multiple,2),"preço ÷ MM200 · &lt;1 histórico barato")}
+    ${cell("Média de 200 dias",fmtUSD(m.ma200,0))}
+    ${cell("Média de 2 anos","x"+fmtN(m.ma730_multiple,2),fmtUSD(m.ma730,0)+" · suporte estrutural")}
+    ${cell("Pi Cycle Top", pi==null?"—":(pi>=0?"cruzou ⚠":fmtN(Math.abs(pi),0)+"% abaixo"),
+           "111d vs 350d ×2")}
+    ${cell("Topo histórico",fmtUSD(m.ath,0))}
+    ${cell("No ano","<span class='"+cls(m.ytd_pct)+"'>"+fmtPct(m.ytd_pct)+"</span>")}
+  </div></section>`;
+
+  // ---------- risco
+  h+=`<section><h2>Risco e posicionamento</h2><div class="grid">
+    ${cell("Funding rate","<span class='"+cls(dv.funding_rate_pct)+"'>"+fmtPct(dv.funding_rate_pct,4)+"</span>",
+           "positivo = comprados pagando")}
+    ${cell("Open interest","US$ "+big(dv.open_interest_usd), fmtN(dv.open_interest_btc,0)+" BTC")}
+    ${cell("Medo & Ganância", fg.value??"—", fg.label||"", fg.value)}
+    ${cell("Dominância BTC", fmtLvl((mk.dominance||{}).btc), "ETH "+fmtLvl((mk.dominance||{}).eth))}
+    ${cell("Cap. total do mercado","US$ "+big(mk.total_mcap),
+           "<span class='"+cls(mk.total_mcap_chg24h)+"'>"+fmtPct(mk.total_mcap_chg24h)+"</span> em 24h")}
+    ${cell("Dias desde o halving", cy.days_since_halving??"—",
+           cy.est_next_halving?("próximo ≈ "+cy.est_next_halving):"")}
+  </div></section>`;
+
+  // ---------- rede
+  h+=`<section><h2>Rede</h2><div class="grid">
+    ${cell("Hashrate", net.hashrate?big(net.hashrate/1e18)+" EH/s":"—")}
+    ${cell("Próximo ajuste de dificuldade",
+           "<span class='"+cls(net.difficulty_change_pct)+"'>"+fmtPct(net.difficulty_change_pct)+"</span>",
+           (net.blocks_to_retarget??"—")+" blocos")}
+    ${cell("Taxa (rápida)", net.fee_fast!=null?net.fee_fast+" sat/vB":"—",
+           net.fee_economy!=null?("econômica "+net.fee_economy+" sat/vB"):"")}
+    ${cell("Altura do bloco", net.block_height?fmtN(net.block_height,0):"—")}
+  </div></section>`;
+
+  // ---------- altcoins
+  const alts=mk.alts||[];
+  if(alts.length){
+    const linhas=alts.map(a=>{
+      if(a.missing) return `<tr><td>${a.symbol}</td><td colspan="5" style="text-align:left;color:var(--faint)">
+        id da CoinGecko não resolveu — conferir em scripts/config.py</td></tr>`;
+      const foco=a.vs_btc_focus;
+      let r=`<tr class="${foco?"focus":""}">
+        <td>${a.symbol}${foco?'<span class="tag">FOCO BTC</span>':""}</td>
+        <td>${fmtUSD(a.price)}</td>
+        <td class="${cls(a.chg24h)}">${fmtPct(a.chg24h)}</td>
+        <td class="${cls(a.chg7d)}">${fmtPct(a.chg7d)}</td>
+        <td class="${cls(a.chg7d_btc)}"><b>${fmtPct(a.chg7d_btc)}</b></td>
+        <td class="hide">US$ ${big(a.mcap)}</td></tr>`;
+      if(a.note) r+=`<tr class="${foco?"focus":""}"><td colspan="6" class="rownote">↳ ${a.note}</td></tr>`;
+      return r;
+    }).join("");
+    h+=`<section><h2>Altcoins</h2><table>
+      <thead><tr><th>Ativo</th><th>Preço</th><th>24h</th><th>7d</th>
+        <th>7d vs BTC</th><th class="hide">Cap.</th></tr></thead>
+      <tbody>${linhas}</tbody></table></section>`;
+  }
+
+  // ---------- macro
+  const macro=d.macro||[];
+  if(macro.length) h+=`<section><h2>Mercado tradicional</h2><div class="grid">
+    ${macro.map(x=>cell(x.label,fmtN(x.close,2),
+      "<span class='"+cls(x.chg_pct)+"'>"+fmtPct(x.chg_pct)+"</span> no dia")).join("")}
+  </div></section>`;
+
+  // ---------- calendário econômico (EUA)
+  h+=`<section><h2>Agenda econômica dos EUA</h2>
+    <div class="cal"><div class="tradingview-widget-container">
+      <div class="tradingview-widget-container__widget"></div>
+    </div></div></section>`;
+
+  document.getElementById("app").innerHTML=h;
+
+  // saúde das fontes
+  const src=d.sources||{};
+  document.getElementById("health").innerHTML=Object.entries(src).map(([n,s])=>
+    `<span class="chip ${s.ok?"":"bad"}" title="${(s.detail||"").replace(/"/g,"")}">
+      <span class="dot"></span>${n}</span>`).join("");
+
+  // O widget do TradingView só entra depois que o container existe no DOM.
+  const s=document.createElement("script");
+  s.src="https://s3.tradingview.com/external-embedding/embed-widget-events.js";
+  s.async=true;
+  s.innerHTML=JSON.stringify({
+    colorTheme:"dark", isTransparent:true, width:"100%", height:420,
+    locale:"br", importanceFilter:"0,1", countryFilter:"us"
+  });
+  document.querySelector(".tradingview-widget-container").appendChild(s);
+}
+
+fetch("./data.json?t="+Date.now())
+  .then(r=>{ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); })
+  .then(render)
+  .catch(e=>{
+    document.getElementById("app").innerHTML=
+      `<div class="loading">Não consegui ler o <b>data.json</b> (${e.message}).<br><br>
+       Se o repositório acabou de subir, rode o workflow<br>
+       <b>Actions → Atualizar painel → Run workflow</b> uma vez.</div>`;
+  });
+
+if("serviceWorker" in navigator){
+  window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
+}
+</script>
+</body>
+</html>
