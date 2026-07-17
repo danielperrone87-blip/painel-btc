@@ -24,8 +24,9 @@ import requests
 sys.path.insert(0, str(Path(__file__).parent))
 from config import (  # noqa: E402
     ALTCOINS, HALVINGS, BLOCKS_PER_HALVING, MA_WINDOWS, STOOQ_SYMBOLS,
-    CBBI_URL, CG_BASE, BINANCE_FUT, FNG_URL, MEMPOOL_BASE, STOOQ_BASE,
-    HTTP_TIMEOUT, USER_AGENT, CBBI_LABELS,
+    CBBI_URL, CG_BASE, OKX_BASE, FNG_URL, MEMPOOL_BASE, STOOQ_BASE,
+    CMC_PUBLIC, HTTP_TIMEOUT, USER_AGENT, CBBI_LABELS, MANUAL_CHART_LINES,
+    ETF_ENABLED, ETF_SOURCES,
 )
 
 ROOT = Path(__file__).parent.parent
@@ -145,7 +146,117 @@ def price_models(price_series, live_price):
     if prior:
         out["ytd_pct"] = (px / prior[-1] - 1) * 100
 
+    # Stochastic RSI (diário) — sobrecompra/sobrevenda.
+    out["stoch_rsi"] = stoch_rsi(ordered)
+
     return out
+
+
+def _rsi(values, period=14):
+    """RSI clássico (Wilder). Retorna a série de RSI alinhada ao fim."""
+    if len(values) < period + 1:
+        return []
+    gains, losses = [], []
+    for i in range(1, len(values)):
+        ch = values[i] - values[i - 1]
+        gains.append(max(ch, 0.0))
+        losses.append(max(-ch, 0.0))
+    # média inicial
+    avg_g = sum(gains[:period]) / period
+    avg_l = sum(losses[:period]) / period
+    rsis = []
+    for i in range(period, len(gains) + 1):
+        if i > period:
+            avg_g = (avg_g * (period - 1) + gains[i - 1]) / period
+            avg_l = (avg_l * (period - 1) + losses[i - 1]) / period
+        rs = (avg_g / avg_l) if avg_l else float("inf")
+        rsis.append(100 - 100 / (1 + rs))
+    return rsis
+
+
+def stoch_rsi(prices, rsi_period=14, stoch_period=14):
+    """Stochastic RSI: onde o RSI está dentro da sua própria faixa recente.
+    0-100. <20 = sobrevendido, >80 = sobrecomprado. Leitura de momentum."""
+    rsis = _rsi(prices, rsi_period)
+    if len(rsis) < stoch_period:
+        return None
+    window = rsis[-stoch_period:]
+    lo, hi = min(window), max(window)
+    cur = rsis[-1]
+    k = (cur - lo) / (hi - lo) * 100 if hi > lo else 50.0
+    if k < 20:
+        zona = "sobrevendido"
+    elif k > 80:
+        zona = "sobrecomprado"
+    else:
+        zona = "neutro"
+    return {"value": round(k, 1), "rsi": round(cur, 1), "zone": zona}
+
+
+def build_chart_series(price_series, cbbi_metrics, manual_lines):
+    """Série semanal para o gráfico do BTC com as linhas de ciclo traçadas.
+
+    Automáticas (calculadas do preço): SMA 200/300/400 semanal, MVRV 0.80.
+    Do CBBI: CVDD (via Top Cap vs CVDD, quando disponível).
+    Manuais (Daniel digita em config): GCC, Balanced Price, LTH Realized Price.
+
+    Salvo à parte do data.json porque é maior e muda devagar — não precisa
+    recarregar a cada abertura do painel."""
+    if not price_series:
+        return None
+
+    items = sorted(price_series.items())            # (ts, preço) diário
+    ordered = [v for _, v in items]
+
+    def sma_at(idx, days):
+        """Média dos 'days' dias até idx (inclusive)."""
+        if idx + 1 < days:
+            return None
+        janela = ordered[idx + 1 - days: idx + 1]
+        return sum(janela) / len(janela)
+
+    W = 7  # passo semanal (reduz ~7x o tamanho do arquivo)
+    D200, D300, D400 = 200 * 7, 300 * 7, 400 * 7    # semanas -> dias
+
+    points = []
+    for i in range(0, len(items), W):
+        ts, px = items[i]
+        points.append({
+            "t": ts * 1000,                          # ms, formato do gráfico
+            "price": round(px, 2),
+            "sma200w": round(sma_at(i, D200), 2) if sma_at(i, D200) else None,
+            "sma300w": round(sma_at(i, D300), 2) if sma_at(i, D300) else None,
+            "sma400w": round(sma_at(i, D400), 2) if sma_at(i, D400) else None,
+        })
+
+    # Sempre inclui o último ponto real (o loop pode pular ele)
+    ts_last, px_last = items[-1]
+    if points and points[-1]["t"] != ts_last * 1000:
+        j = len(items) - 1
+        points.append({
+            "t": ts_last * 1000, "price": round(px_last, 2),
+            "sma200w": round(sma_at(j, D200), 2) if sma_at(j, D200) else None,
+            "sma300w": round(sma_at(j, D300), 2) if sma_at(j, D300) else None,
+            "sma400w": round(sma_at(j, D400), 2) if sma_at(j, D400) else None,
+        })
+
+    # MVRV 0.80: aproximação da linha de suporte que o Campos traça.
+    # Realized Price ~ preço / MVRV atual; a 0.80 marca 80% desse valor.
+    # Sem realized price on-chain grátis, usamos a SMA de ~200 dias como proxy
+    # do custo médio e aplicamos o fator — é uma APROXIMAÇÃO, rotulada como tal.
+    mvrv080 = None
+    proxy_realized = sma_at(len(items) - 1, 200)
+    if proxy_realized:
+        mvrv080 = round(proxy_realized * 0.80, 2)
+
+    return {
+        "points": points,
+        "auto_levels": {
+            "mvrv080": {"label": "MVRV 0,80 (aprox.)", "value": mvrv080},
+        },
+        "manual_levels": manual_lines,   # vem do config, Daniel edita
+        "last_price": round(px_last, 2),
+    }
 
 
 def cycle_clock(block_height):
@@ -231,18 +342,39 @@ def fetch_coingecko():
     }
 
 
-@source("Binance (derivativos)")
+@source("OKX (derivativos)")
 def fetch_derivatives():
-    prem = get_json(f"{BINANCE_FUT}/premiumIndex", params={"symbol": "BTCUSDT"})
-    oi = get_json(f"{BINANCE_FUT}/openInterest", params={"symbol": "BTCUSDT"})
-    mark = float(prem.get("markPrice") or 0)
-    contracts = float(oi.get("openInterest") or 0)
+    """Funding e open interest via OKX. Trocamos a Binance porque ela devolve
+    451 (bloqueio geográfico) quando chamada de servidores dos EUA, que é onde
+    o GitHub Actions roda. A OKX mantém acesso público dos EUA e não pede chave."""
+    inst = "BTC-USDT-SWAP"
+
+    def first(js):
+        return (js.get("data") or [{}])[0]
+
+    fr = first(get_json(f"{OKX_BASE}/public/funding-rate", params={"instId": inst}))
+    oi = first(get_json(f"{OKX_BASE}/public/open-interest",
+                        params={"instType": "SWAP", "instId": inst}))
+    mk = first(get_json(f"{OKX_BASE}/public/mark-price",
+                        params={"instType": "SWAP", "instId": inst}))
+
+    def num(d, k):
+        v = d.get(k)
+        return float(v) if v not in (None, "") else None
+
+    mark = num(mk, "markPx")
+    contracts = num(oi, "oiCcy")          # OI em BTC
+    oi_usd = num(oi, "oiUsd")             # OKX já costuma entregar em USD
+    if oi_usd is None and contracts and mark:
+        oi_usd = contracts * mark
+
+    funding = num(fr, "fundingRate")
     return {
-        "funding_rate_pct": float(prem["lastFundingRate"]) * 100,
-        "next_funding": prem.get("nextFundingTime"),
+        "funding_rate_pct": funding * 100 if funding is not None else None,
+        "next_funding": fr.get("nextFundingTime") or None,
         "open_interest_btc": contracts,
-        "open_interest_usd": contracts * mark if mark else None,
-        "mark_price": mark or None,
+        "open_interest_usd": oi_usd,
+        "mark_price": mark,
     }
 
 
@@ -256,6 +388,31 @@ def fetch_fng():
         "label": cur["value_classification"],
         "previous": int(prev["value"]) if prev else None,
     }
+
+
+@source("Altcoin Season (CMC)")
+def fetch_altseason(alts):
+    """Altcoin Season Index oficial via API keyless da CoinMarketCap.
+    Se a CMC falhar, calcula um índice próprio: % das alts da watchlist
+    que superaram o BTC em 30 dias (mesma ideia, escopo menor)."""
+    try:
+        js = get_json(f"{CMC_PUBLIC}/v1/altcoin-season-index/latest")
+        idx = (js.get("data") or {}).get("altcoin_index")
+        if idx is not None:
+            return {"value": round(float(idx), 0), "source": "CMC (top 100)",
+                    "note": "0-25 temporada do BTC · 75-100 temporada de alts"}
+    except Exception:
+        pass  # cai no cálculo próprio
+
+    # Fallback: das minhas alts, quantas ganharam do BTC em 30d?
+    vals = [a.get("chg30d_btc") for a in (alts or [])
+            if not a.get("missing") and a.get("chg30d_btc") is not None]
+    if not vals:
+        raise RuntimeError("sem CMC e sem dados de alts para calcular")
+    outperf = sum(1 for v in vals if v > 0)
+    pct = round(outperf / len(vals) * 100, 0)
+    return {"value": pct, "source": f"próprio ({len(vals)} alts)",
+            "note": "% da sua watchlist que superou o BTC em 30d"}
 
 
 @source("mempool.space")
@@ -304,6 +461,213 @@ def fetch_macro():
     return out
 
 
+# --------------------------------------------------------------- ETF flows
+
+def _etf_num(s):
+    """Formato britânico da Farside: '(300.4)' -> -300.4, '1,255' -> 1255, '-' -> None."""
+    s = (s or "").strip()
+    if s in ("-", "", "–", "—"):
+        return None
+    neg = s.startswith("(") and s.endswith(")")
+    s = s.strip("()").replace(",", "").replace(" ", "")
+    try:
+        v = float(s)
+        return -v if neg else v
+    except ValueError:
+        return None
+
+
+def _parse_farside(html):
+    """Extrai (data, total_diário) de cada linha e o total histórico da tabela.
+    A Farside serve HTML; procuramos linhas de tabela com data e a última coluna
+    (Total). Tolerante a <td>...</td> ou a texto separado por '|'."""
+    import re as _re
+    # Normaliza: transforma células HTML em separadores '|'
+    txt = _re.sub(r"</t[dh]>", "|", html)
+    txt = _re.sub(r"<[^>]+>", "", txt)             # remove tags restantes
+    txt = txt.replace("&nbsp;", " ")
+
+    daily = []
+    hist_total = None
+    for line in txt.splitlines():
+        cells = [c.strip() for c in line.split("|") if c.strip() != ""]
+        if len(cells) < 2:
+            continue
+        head = cells[0]
+        if _re.match(r"^\d{1,2}\s+[A-Za-z]{3}\s+\d{4}$", head):
+            try:
+                dt = datetime.strptime(head, "%d %b %Y").date()
+            except ValueError:
+                continue
+            daily.append((dt, _etf_num(cells[-1])))
+        elif head.lower() == "total":
+            hist_total = _etf_num(cells[-1])
+    return daily, hist_total
+
+
+def _etf_summary(daily, hist_total):
+    real = [(d, t) for d, t in daily if t is not None]
+    # remove dias em aberto no fim (total 0 sem fluxo lançado)
+    while real and real[-1][1] == 0.0:
+        real.pop()
+    if not real:
+        return None
+    last_dt, last_val = real[-1]
+    return {
+        "last_day": round(last_val, 1),
+        "last_date": last_dt.isoformat(),
+        "week": round(sum(t for _, t in real[-5:]), 1),      # ~5 pregões
+        "month": round(sum(t for _, t in real[-21:]), 1),    # ~21 pregões
+        "cumulative": round(hist_total, 0) if hist_total is not None else None,
+        "unit": "US$ mi",
+    }
+
+
+@source("ETF (Farside)")
+def fetch_etf_flows():
+    """Fluxos de ETF (BTC, ETH, SOL, HYPE) da Farside Investors, por scraping.
+    Cada ativo é isolado: um que falhe não derruba os outros."""
+    if not ETF_ENABLED:
+        raise RuntimeError("ETF desativado em config (ETF_ENABLED=False)")
+    out = {}
+    erros = []
+    for asset, url in ETF_SOURCES.items():
+        try:
+            r = SESSION.get(url, timeout=HTTP_TIMEOUT)
+            r.raise_for_status()
+            daily, hist = _parse_farside(r.text)
+            summ = _etf_summary(daily, hist)
+            if summ:
+                out[asset] = summ
+            else:
+                erros.append(f"{asset}: sem linhas válidas")
+        except Exception as exc:  # noqa: BLE001
+            erros.append(f"{asset}: {type(exc).__name__}")
+    if not out:
+        raise RuntimeError("nenhum ETF extraído — " + "; ".join(erros))
+    if erros:
+        out["_partial"] = "; ".join(erros)   # registra falhas parciais
+    return out
+
+
+# ------------------------------------------------------------- insights
+
+def build_insights(cbbi, models, derivs, fng, market, altseason):
+    """Lê o conjunto de métricas e DESCREVE o momento — sem recomendar
+    compra ou venda. Cada frase aponta o que o dado indica historicamente.
+    O objetivo é síntese, não conselho: mostra convergências e divergências."""
+    obs = []
+
+    def score(k):
+        m = (cbbi or {}).get(k)
+        return m["score"] if m and m.get("score") is not None else None
+
+    conf = score("confidence")
+
+    # --- posição de ciclo (CBBI)
+    if conf is not None:
+        if conf >= 85:
+            obs.append(("ciclo", "quente",
+                "CBBI em {:.0f}/100 — zona de euforia. Historicamente é a "
+                "faixa em que ciclos anteriores formaram topos.".format(conf)))
+        elif conf >= 70:
+            obs.append(("ciclo", "quente",
+                "CBBI em {:.0f}/100 — faixa aquecida, mas ainda não extrema.".format(conf)))
+        elif conf < 25:
+            obs.append(("ciclo", "frio",
+                "CBBI em {:.0f}/100 — zona historicamente fria, associada a "
+                "fundos de ciclo.".format(conf)))
+        else:
+            obs.append(("ciclo", "neutro",
+                "CBBI em {:.0f}/100 — meio da faixa, sem extremo de ciclo.".format(conf)))
+
+    # --- preço vs médias
+    mm = (models or {}).get("mayer_multiple")
+    if mm is not None:
+        if mm < 1:
+            obs.append(("preço", "frio",
+                "Múltiplo de Mayer em {:.2f} (<1): preço abaixo da média de "
+                "200 dias, território historicamente barato.".format(mm)))
+        elif mm > 2.4:
+            obs.append(("preço", "quente",
+                "Múltiplo de Mayer em {:.2f} (>2,4): preço muito esticado "
+                "acima da média de 200 dias.".format(mm)))
+
+    # --- Pi Cycle
+    pi = (models or {}).get("pi_cycle_gap_pct")
+    if pi is not None and pi >= -5:
+        obs.append(("preço", "quente",
+            "Pi Cycle a {:.0f}% do cruzamento — sinal clássico de proximidade "
+            "de topo quando a 111DMA alcança a 350DMA×2.".format(pi)
+            if pi < 0 else
+            "Pi Cycle CRUZOU — em ciclos passados coincidiu com topos."))
+
+    # --- Stoch RSI
+    sr = (models or {}).get("stoch_rsi")
+    if sr:
+        if sr["zone"] == "sobrevendido":
+            obs.append(("momentum", "frio",
+                "Stoch RSI em {:.0f} (sobrevendido): momentum esticado para "
+                "baixo no curto prazo.".format(sr["value"])))
+        elif sr["zone"] == "sobrecomprado":
+            obs.append(("momentum", "quente",
+                "Stoch RSI em {:.0f} (sobrecomprado): momentum esticado para "
+                "cima no curto prazo.".format(sr["value"])))
+
+    # --- derivativos
+    fr = (derivs or {}).get("funding_rate_pct")
+    if fr is not None:
+        if fr > 0.03:
+            obs.append(("risco", "quente",
+                "Funding em {:.3f}% — comprados pagando caro para manter "
+                "posição, sinal de alavancagem otimista elevada.".format(fr)))
+        elif fr < 0:
+            obs.append(("risco", "frio",
+                "Funding negativo ({:.3f}%) — vendidos pagando, indicando "
+                "pessimismo no mercado alavancado.".format(fr)))
+
+    # --- medo e ganância
+    fgv = (fng or {}).get("value")
+    if fgv is not None:
+        if fgv >= 75:
+            obs.append(("sentimento", "quente",
+                "Medo & Ganância em {} (ganância) — sentimento aquecido.".format(fgv)))
+        elif fgv <= 25:
+            obs.append(("sentimento", "frio",
+                "Medo & Ganância em {} (medo) — sentimento deprimido.".format(fgv)))
+
+    # --- altseason
+    asv = (altseason or {}).get("value")
+    if asv is not None:
+        if asv >= 75:
+            obs.append(("alts", "info",
+                "Altcoin Season em {:.0f} — alts amplamente superando o BTC.".format(asv)))
+        elif asv <= 25:
+            obs.append(("alts", "info",
+                "Altcoin Season em {:.0f} — capital concentrado no BTC.".format(asv)))
+
+    # --- síntese: contar temperatura
+    quentes = sum(1 for _, t, _ in obs if t == "quente")
+    frios = sum(1 for _, t, _ in obs if t == "frio")
+    if quentes and quentes >= frios + 2:
+        resumo = ("Vários indicadores de ciclo e risco na faixa quente ao mesmo "
+                  "tempo — leitura de mercado esticado. Convergência costuma "
+                  "merecer mais atenção que um sinal isolado.")
+    elif frios and frios >= quentes + 2:
+        resumo = ("Predomínio de leituras na faixa fria — historicamente "
+                  "associado a fases de acumulação, sem sinais de "
+                  "sobreaquecimento no conjunto.")
+    else:
+        resumo = ("Sinais mistos: indicadores quentes e frios convivem. "
+                  "Momentos assim pedem acompanhar qual lado ganha força.")
+
+    return {
+        "resumo": resumo,
+        "observacoes": [{"tag": t, "temp": temp, "texto": txt} for t, temp, txt in obs],
+        "disclaimer": "Leitura descritiva dos dados, não recomendação de compra ou venda.",
+    }
+
+
 # ------------------------------------------------------------------- main
 
 def main():
@@ -315,10 +679,15 @@ def main():
     fng = fetch_fng()
     net = fetch_network()
     macro = fetch_macro()
+    altseason = fetch_altseason((market or {}).get("alts", []))
+    etf = fetch_etf_flows()
 
     live_price = (market or {}).get("btc", {}).get("price")
-    models = price_models((cbbi or {}).get("price_series", {}), live_price)
+    price_series = (cbbi or {}).get("price_series", {})
+    models = price_models(price_series, live_price)
     clock = cycle_clock((net or {}).get("block_height"))
+    chart = build_chart_series(price_series, (cbbi or {}).get("metrics", {}), MANUAL_CHART_LINES)
+    insights = build_insights((cbbi or {}).get("metrics", {}), models, derivs, fng, market, altseason)
 
     data = {
         "generated_at": now.isoformat(),
@@ -329,6 +698,9 @@ def main():
         "market": market,
         "derivatives": derivs,
         "fear_greed": fng,
+        "altseason": altseason,
+        "etf": etf,
+        "insights": insights,
         "network": net,
         "macro": macro,
         "sources": SOURCES,
@@ -337,6 +709,13 @@ def main():
     (ROOT / "data.json").write_text(
         json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8"
     )
+
+    # Gráfico vai em arquivo separado (maior, muda devagar).
+    if chart:
+        (ROOT / "chart.json").write_text(
+            json.dumps(chart, ensure_ascii=False), encoding="utf-8"
+        )
+        print(f"chart.json gravado — {len(chart['points'])} pontos semanais")
 
     ok = sum(1 for s in SOURCES.values() if s["ok"])
     print(f"data.json gravado — {ok}/{len(SOURCES)} fontes responderam")
