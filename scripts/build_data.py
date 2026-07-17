@@ -435,29 +435,36 @@ def fetch_network():
 
 @source("Stooq (macro)")
 def fetch_macro():
-    syms = "+".join(STOOQ_SYMBOLS)
-    r = SESSION.get(STOOQ_BASE, timeout=HTTP_TIMEOUT, params={
-        "s": syms, "f": "sd2t2ohlcv", "h": "", "e": "csv",
-    })
-    r.raise_for_status()
-    rows = list(csv.DictReader(io.StringIO(r.text)))
+    """Índices macro da Stooq. Buscamos UM símbolo por vez: o modo de vários
+    símbolos numa URL só ficou instável (404). Um símbolo por requisição é
+    mais robusto — se um falhar, os outros ainda vêm. Header de navegador
+    ajuda a evitar bloqueio."""
+    headers = {"User-Agent": "Mozilla/5.0 (compatible; painel-btc/1.0)"}
     out = []
-    for row in rows:
-        sym = (row.get("Symbol") or "").lower()
+    falhas = []
+    for sym, label in STOOQ_SYMBOLS.items():
         try:
-            close = float(row["Close"])
-            openp = float(row["Open"])
-        except (TypeError, ValueError, KeyError):
-            continue  # símbolo não resolveu na Stooq
-        out.append({
-            "symbol": sym,
-            "label": STOOQ_SYMBOLS.get(sym, sym.upper()),
-            "close": close,
-            "chg_pct": (close / openp - 1) * 100 if openp else None,
-            "date": row.get("Date"),
-        })
+            r = SESSION.get(STOOQ_BASE, timeout=HTTP_TIMEOUT, headers=headers,
+                            params={"s": sym, "f": "sd2t2ohlcv", "h": "", "e": "csv"})
+            r.raise_for_status()
+            rows = list(csv.DictReader(io.StringIO(r.text)))
+            if not rows:
+                falhas.append(sym); continue
+            row = rows[0]
+            close = row.get("Close"); openp = row.get("Open")
+            if close in (None, "", "N/D") or openp in (None, "", "N/D"):
+                falhas.append(sym); continue
+            close = float(close); openp = float(openp)
+            out.append({
+                "symbol": sym, "label": label,
+                "close": close,
+                "chg_pct": (close / openp - 1) * 100 if openp else None,
+                "date": row.get("Date"),
+            })
+        except Exception:  # noqa: BLE001
+            falhas.append(sym)
     if not out:
-        raise RuntimeError("Stooq não retornou nenhum símbolo válido")
+        raise RuntimeError("Stooq: nenhum símbolo válido (" + ",".join(falhas) + ")")
     return out
 
 
@@ -526,14 +533,22 @@ def _etf_summary(daily, hist_total):
 @source("ETF (Farside)")
 def fetch_etf_flows():
     """Fluxos de ETF (BTC, ETH, SOL, HYPE) da Farside Investors, por scraping.
-    Cada ativo é isolado: um que falhe não derruba os outros."""
+    Cada ativo é isolado: um que falhe não derruba os outros.
+    A Farside bloqueia requisições sem User-Agent de navegador, então enviamos
+    um cabeçalho de navegador comum."""
     if not ETF_ENABLED:
         raise RuntimeError("ETF desativado em config (ETF_ENABLED=False)")
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                      "AppleWebKit/537.36 (KHTML, like Gecko) "
+                      "Chrome/120.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml",
+    }
     out = {}
     erros = []
     for asset, url in ETF_SOURCES.items():
         try:
-            r = SESSION.get(url, timeout=HTTP_TIMEOUT)
+            r = SESSION.get(url, timeout=HTTP_TIMEOUT, headers=headers)
             r.raise_for_status()
             daily, hist = _parse_farside(r.text)
             summ = _etf_summary(daily, hist)
