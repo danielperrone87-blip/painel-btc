@@ -34,13 +34,14 @@ MA_WINDOWS = {
 }
 
 # ---------------------------------------------------------------- macro
-# Símbolos da Stooq. Alguns podem não resolver — o script degrada sem quebrar
-# e reporta em 'sources'. Ajustar aqui se o log acusar falha.
+# Símbolos da Stooq. Índices levam '^'. Buscados um a um (mais robusto).
+# Se algum acender vermelho no log, veja o símbolo correto em stooq.com.
 STOOQ_SYMBOLS = {
-    "^spx":    "S&P 500",
-    "^ndq":    "Nasdaq 100",
-    "dx.f":    "DXY (Dólar)",
-    "xauusd":  "Ouro",
+    "^spx":  "S&P 500",
+    "^ndq":  "Nasdaq 100",
+    "^dji":  "Dow Jones",
+    "dx.f":  "DXY (Dólar)",
+    "xauusd": "Ouro",
     "10usy.b": "Treasury 10 anos",
 }
 
