@@ -44,14 +44,43 @@ STOOQ_SYMBOLS = {
     "10usy.b": "Treasury 10 anos",
 }
 
+# ---------------------------------------------------------------- gráfico
+# Linhas de suporte on-chain que o Campos traça À MÃO (não têm fonte grátis).
+# Quando ele divulgar novos valores numa live, edite os números aqui.
+# Deixe value como None para a linha não aparecer.
+# 'color' é opcional (usa a paleta padrão se omitido).
+MANUAL_CHART_LINES = [
+    {"key": "gcc",      "label": "Preço Realizado Geral (GCC)", "value": None},
+    {"key": "cvdd",     "label": "CVDD",                        "value": None},
+    {"key": "balanced", "label": "Balanced Price",             "value": None},
+    {"key": "lth",      "label": "LTH Realized Price",          "value": None},
+]
+
 # ---------------------------------------------------------------- endpoints
 CBBI_URL       = "https://colintalkscrypto.com/cbbi/data/latest.json"
 CG_BASE        = "https://api.coingecko.com/api/v3"
-BINANCE_SPOT   = "https://api.binance.com/api/v3"
-BINANCE_FUT    = "https://fapi.binance.com/fapi/v1"
+# OKX no lugar da Binance: a Binance bloqueia servidores dos EUA (erro 451),
+# que é onde o GitHub Actions roda. A OKX permite acesso público dos EUA.
+OKX_BASE       = "https://www.okx.com/api/v5"
 FNG_URL        = "https://api.alternative.me/fng/?limit=2"
 MEMPOOL_BASE   = "https://mempool.space/api"
 STOOQ_BASE     = "https://stooq.com/q/l/"
+# CoinMarketCap API pública SEM CHAVE (prefixo /public-api). Traz o Altcoin
+# Season Index oficial. Se falhar, calculamos um índice próprio das altcoins.
+CMC_PUBLIC     = "https://pro-api.coinmarketcap.com/public-api"
+
+# ---------------------------------------------------------------- ETF
+# Fluxos de ETF via Farside Investors (farside.co.uk). Eles servem a tabela em
+# HTML puro, então lemos e extraímos (scraping). É mais frágil que uma API: se
+# a Farside mudar o layout, a extração para e o bloco fica vazio com aviso —
+# mas nada mais no painel quebra (fonte isolada, como todas as outras).
+ETF_ENABLED = True
+ETF_SOURCES = {
+    "BTC":  "https://farside.co.uk/btc/",
+    "ETH":  "https://farside.co.uk/eth/",
+    "SOL":  "https://farside.co.uk/sol/",
+    "HYPE": "https://farside.co.uk/hyp/",
+}
 
 HTTP_TIMEOUT = 25
 USER_AGENT = "btc-cockpit/1.0 (painel pessoal de acompanhamento)"
