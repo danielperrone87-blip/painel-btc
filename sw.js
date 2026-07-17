@@ -1,4 +1,4 @@
-const CACHE = "ciclo-btc-v1";
+const CACHE = "ciclo-btc-v4";
 const SHELL = ["./index.html", "./manifest.json", "./icon.svg"];
 
 self.addEventListener("install", e => {
@@ -15,7 +15,7 @@ self.addEventListener("fetch", e => {
   const url = new URL(e.request.url);
 
   // data.json e o calendário NUNCA saem do cache: dado velho é pior que dado ausente.
-  if (url.pathname.endsWith("data.json") || url.hostname.includes("tradingview")) {
+  if (url.pathname.endsWith("data.json") || url.pathname.endsWith("chart.json") || url.hostname.includes("tradingview")) {
     e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
     return;
   }
