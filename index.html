@@ -535,7 +535,11 @@ function loadChart(){
     .then(drawChart)
     .catch(()=>{
       const note=document.getElementById("chartNote");
-      if(note) note.innerHTML="Gráfico ainda não gerado. Rode o workflow uma vez para criar o <b>chart.json</b>.";
+      if(note) note.innerHTML=
+        'Aguardando o <b>chart.json</b> ser publicado (pode levar 1-2 min após rodar o workflow). '+
+        '<button onclick="loadChart()" style="margin-left:8px;padding:4px 10px;border-radius:7px;'+
+        'border:1px solid var(--line);background:var(--surface2);color:var(--text);'+
+        'cursor:pointer;font-family:var(--mono);font-size:11px">Tentar de novo</button>';
     });
 }
 
