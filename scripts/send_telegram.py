@@ -54,6 +54,15 @@ def arrow(v):
     return "🟢" if v >= 0 else "🔴"
 
 
+def pct_flow(v):
+    """Fluxo de ETF em US$mi, com sinal e emoji de direção."""
+    if v is None:
+        return "—"
+    sign = "+" if v >= 0 else ""
+    emoji = "🟢" if v >= 0 else "🔴"
+    return f"{emoji} {sign}{v:,.1f}".replace(",", "@").replace(".", ",").replace("@", ".")
+
+
 def build_message(d):
     m = d.get("models") or {}
     mk = d.get("market") or {}
@@ -129,6 +138,18 @@ def build_message(d):
             f"{arrow(a.get('chg24h'))} {pct(a.get('chg24h'))}{vb_txt}"
         )
     L.append("")
+
+    # --- ETF
+    etf = d.get("etf") or {}
+    etf_order = [a for a in ("BTC", "ETH", "SOL", "HYPE") if a in etf]
+    if etf_order:
+        L.append("<b>ETF (fluxo do dia · US$mi)</b>")
+        for a in etf_order:
+            e = etf[a]
+            ld = e.get("last_day")
+            wk = e.get("week")
+            L.append(f"{a}: {pct_flow(ld)} (dia) · {pct_flow(wk)} (sem)")
+        L.append("")
 
     # --- macro
     macro = d.get("macro") or []
