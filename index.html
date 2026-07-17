@@ -11,6 +11,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-adapter-date-fns/3.0.0/chartjs-adapter-date-fns.bundle.min.js"></script>
 <style>
   :root{
     --bg:#0D1220; --surface:#151D30; --surface2:#1C2740; --line:#26334D;
@@ -103,6 +105,64 @@
     padding:0 0 11px!important;text-align:left!important;border:0!important}
   .up{color:var(--up)} .down{color:var(--down)} .nul{color:var(--faint)}
 
+  /* ---------------------------------------------------- tooltip / ajuda */
+  .help{display:inline-flex;align-items:center;justify-content:center;
+    width:14px;height:14px;margin-left:5px;border-radius:99px;cursor:pointer;
+    background:var(--surface2);color:var(--faint);border:1px solid var(--line);
+    font-size:9px;font-weight:700;vertical-align:middle;user-select:none;
+    font-family:var(--mono);transition:.15s}
+  .help:hover{color:var(--text);border-color:var(--cold)}
+  .tip{position:absolute;z-index:1000;display:none;background:#0A0E1A;
+    color:var(--text);border:1px solid var(--faint);border-radius:10px;
+    padding:11px 13px;font-family:var(--body);font-size:12px;line-height:1.5;
+    box-shadow:0 8px 30px rgba(0,0,0,.5)}
+
+  /* ---------------------------------------------------- insights */
+  .insights{background:linear-gradient(180deg,var(--surface),var(--surface2));
+    border:1px solid var(--line);border-radius:var(--r);padding:18px 18px 16px;margin-bottom:14px}
+  .insights .lead{font-size:14px;line-height:1.55;color:var(--text);margin-bottom:14px}
+  .obs{display:flex;flex-direction:column;gap:8px}
+  .ob{display:flex;gap:10px;align-items:flex-start;font-size:12.5px;
+    color:var(--muted);line-height:1.45}
+  .ob .dot{flex-shrink:0;width:7px;height:7px;border-radius:99px;margin-top:5px}
+  .ob.quente .dot{background:var(--hot)} .ob.frio .dot{background:var(--cold)}
+  .ob.neutro .dot{background:var(--warm)} .ob.info .dot{background:var(--faint)}
+  .ob b{color:var(--text);font-weight:600}
+  .insights .disc{margin-top:14px;padding-top:12px;border-top:1px solid var(--line);
+    font-size:10.5px;color:var(--faint);font-style:italic}
+
+  /* ---------------------------------------------------- badge stochrsi */
+  .zone-badge{display:inline-block;padding:1px 7px;border-radius:5px;
+    font-family:var(--mono);font-size:9px;letter-spacing:.04em;margin-left:6px;
+    vertical-align:2px;text-transform:uppercase}
+  .zone-sobrevendido{background:rgba(45,182,163,.15);color:var(--cold)}
+  .zone-sobrecomprado{background:rgba(229,72,77,.15);color:var(--hot)}
+  .zone-neutro{background:var(--surface2);color:var(--muted)}
+
+  /* ---------------------------------------------------- ETF (desligado) */
+  .etf-off{background:var(--surface);border:1px dashed var(--line);
+    border-radius:var(--r);padding:18px;color:var(--faint);font-size:12.5px;
+    line-height:1.55;text-align:center}
+
+  /* ---------------------------------------------------- tooltip / ajuda fim */
+  /* ---------------------------------------------------- gráfico BTC */
+  .chartbox{background:var(--surface);border:1px solid var(--line);
+    border-radius:var(--r);padding:16px 14px 14px}
+  .chart-toolbar{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+  .chart-toolbar button{font-family:var(--mono);font-size:11px;
+    padding:5px 11px;border-radius:8px;border:1px solid var(--line);
+    background:var(--surface2);color:var(--muted);cursor:pointer;transition:.15s}
+  .chart-toolbar button:hover{color:var(--text);border-color:var(--faint)}
+  .chart-toolbar button.on{background:var(--cold);color:#04211d;
+    border-color:var(--cold);font-weight:600}
+  .chart-wrap{position:relative;height:340px}
+  .chart-legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:12px;
+    font-family:var(--mono);font-size:10.5px;color:var(--muted)}
+  .chart-legend span{display:inline-flex;align-items:center;gap:6px}
+  .chart-legend i{width:14px;height:2.5px;border-radius:2px;display:inline-block}
+  .chart-legend i.dash{background:repeating-linear-gradient(90deg,currentColor 0 4px,transparent 4px 7px)}
+  .chart-note{margin-top:11px;font-size:11px;color:var(--faint);line-height:1.5}
+
   /* ---------------------------------------------------- calendário */
   .cal{background:var(--surface);border:1px solid var(--line);
     border-radius:var(--r);overflow:hidden;min-height:420px}
@@ -144,7 +204,7 @@
   <div id="app"><div class="loading">Lendo os dados…</div></div>
 
   <footer>
-    Dados de CBBI, CoinGecko, Binance, mempool.space, Alternative.me e Stooq.
+    Dados de CBBI, CoinGecko, OKX, mempool.space, Alternative.me, CoinMarketCap e Stooq.
     Calendário econômico via TradingView. As leituras de ciclo são indicadores
     históricos, não previsão — e nada aqui é recomendação de compra ou venda.
     <div class="health" id="health"></div>
@@ -152,6 +212,79 @@
 </div>
 
 <script>
+// Descrições de cada métrica — aparecem ao tocar (celular) ou passar o mouse.
+const DESCRICOES = {
+  "cbbi": "Índice que combina 9 métricas on-chain para estimar a confiança de que estamos perto de um topo de ciclo. 0 = fundo, 100 = topo de euforia.",
+  "picycle": "Pi Cycle Top: quando a média de 111 dias cruza a média de 350 dias multiplicada por 2, historicamente coincidiu com topos de ciclo do Bitcoin.",
+  "mvrv": "MVRV Z-Score: compara o preço de mercado com o preço médio de compra de todos os holders. Valores altos indicam que o mercado está muito acima do custo médio (topo); baixos, o contrário.",
+  "puell": "Múltiplo de Puell: mede a receita dos mineradores contra a média de um ano. Valores baixos = mineração pouco lucrativa (capitulação, fundos); altos = receita muito acima da média (topos).",
+  "rupl": "NUPL/RUPL: lucro/prejuízo não realizado da rede. Mostra se, na média, os holders estão no lucro (valores altos, euforia) ou no prejuízo (valores baixos, capitulação).",
+  "rhodl": "RHODL Ratio: compara moedas movimentadas recentemente com moedas paradas há muito tempo. Picos historicamente marcaram topos de ciclo.",
+  "2yma": "Multiplicador da média móvel de 2 anos: mede quão longe o preço está da média de 730 dias. Serve como suporte estrutural de longo prazo do ciclo.",
+  "reserverisk": "Reserve Risk: relação entre o preço e a convicção dos holders de longo prazo. Baixo = boa relação risco/retorno historicamente; alto = confiança esticada.",
+  "trolololo": "Trolololo Trend Line: linha de tendência logarítmica de longo prazo do preço do Bitcoin, usada como referência de bandas de valorização.",
+  "woobull": "Top Cap vs CVDD: compara o teto teórico de mercado com o piso histórico (CVDD). Ajuda a situar o preço entre suporte e resistência de ciclo.",
+  "mayer": "Múltiplo de Mayer: preço dividido pela média de 200 dias. Abaixo de 1 é historicamente barato; muito acima de 2,4 costuma indicar preço esticado.",
+  "ma200": "Média móvel simples dos últimos 200 dias — referência clássica de tendência de médio prazo.",
+  "ma730": "Média móvel de 2 anos (730 dias). Em ciclos passados funcionou como piso estrutural nas grandes quedas.",
+  "pi_top": "Distância atual entre a média de 111 dias e a de 350 dias ×2. Quando encostam (0%), é o sinal de topo do Pi Cycle.",
+  "ath": "Maior preço já atingido pelo Bitcoin (topo histórico).",
+  "ytd": "Retorno acumulado do Bitcoin desde o dia 1º de janeiro do ano atual.",
+  "stochrsi": "Stochastic RSI: mede onde o momentum (RSI) está dentro da sua faixa recente. Abaixo de 20 = sobrevendido; acima de 80 = sobrecomprado. É leitura de curto prazo.",
+  "funding": "Taxa de financiamento dos futuros perpétuos. Positiva = comprados pagam vendidos (otimismo alavancado); negativa = o contrário. Extremos sinalizam excesso de um lado.",
+  "oi": "Open Interest: valor total de contratos futuros em aberto. Alta rápida indica mais alavancagem no mercado, o que aumenta o risco de liquidações em cascata.",
+  "fng": "Índice de Medo e Ganância: resume o sentimento do mercado de 0 (medo extremo) a 100 (ganância extrema). Extremos costumam preceder reversões.",
+  "dominance": "Dominância do BTC: fatia do valor total do mercado cripto que é Bitcoin. Queda pode indicar rotação de capital para altcoins.",
+  "mcap": "Capitalização total de mercado de todas as criptomoedas somadas.",
+  "halving": "Dias desde o último halving (corte pela metade da emissão de novos bitcoins). O ciclo de 4 anos é medido a partir desse evento.",
+  "hashrate": "Poder computacional total protegendo a rede Bitcoin. Alta indica mineradores confiantes e rede mais segura.",
+  "difficulty": "Ajuste automático da dificuldade de mineração a cada ~2 semanas, para manter o bloco em ~10 minutos.",
+  "fees": "Taxa recomendada para uma transação entrar rapidamente no próximo bloco, em satoshis por byte virtual.",
+  "blockheight": "Número do bloco mais recente da blockchain do Bitcoin.",
+  "altseason": "Altcoin Season Index: mede se as altcoins estão superando o Bitcoin. Abaixo de 25 = temporada do BTC; acima de 75 = temporada das alts.",
+  "vs_btc": "Desempenho da altcoin medido contra o Bitcoin (não contra o dólar). Mostra se ela está realmente ganhando do BTC ou só subindo junto com o mercado.",
+};
+
+// Sistema de tooltip: um balão único reaproveitado. Toque no celular, hover no desktop.
+let tipEl=null;
+function ensureTip(){
+  if(tipEl) return tipEl;
+  tipEl=document.createElement("div");
+  tipEl.className="tip";
+  document.body.appendChild(tipEl);
+  return tipEl;
+}
+function showTip(target,text){
+  const t=ensureTip();
+  t.textContent=text;
+  t.style.display="block";
+  const r=target.getBoundingClientRect();
+  const tw=Math.min(280,window.innerWidth-24);
+  t.style.width=tw+"px";
+  let left=r.left+r.width/2-tw/2+window.scrollX;
+  left=Math.max(12,Math.min(left,window.innerWidth-tw-12));
+  t.style.left=left+"px";
+  t.style.top=(r.bottom+window.scrollY+8)+"px";
+}
+function hideTip(){ if(tipEl) tipEl.style.display="none"; }
+
+// Liga tooltips em todos os elementos com data-desc (chamado após render).
+function wireTooltips(){
+  document.querySelectorAll("[data-desc]").forEach(el=>{
+    const txt=el.getAttribute("data-desc");
+    if(!txt) return;
+    el.addEventListener("mouseenter",()=>showTip(el,txt));
+    el.addEventListener("mouseleave",hideTip);
+    el.addEventListener("click",(e)=>{
+      e.stopPropagation();
+      if(tipEl && tipEl.style.display==="block" && tipEl.textContent===txt){hideTip();}
+      else showTip(el,txt);
+    });
+  });
+}
+document.addEventListener("click",hideTip);
+window.addEventListener("scroll",hideTip,{passive:true});
+
 const fmtUSD=(v,d)=>v==null?"—":new Intl.NumberFormat("pt-BR",{style:"currency",currency:"USD",
   minimumFractionDigits:d??(v<1?6:v<100?2:0),maximumFractionDigits:d??(v<1?6:v<100?2:0)}).format(v);
 const fmtN=(v,d=2)=>v==null?"—":new Intl.NumberFormat("pt-BR",{minimumFractionDigits:d,maximumFractionDigits:d}).format(v);
@@ -179,16 +312,19 @@ function verdict(s){
   return "Zona de <b>euforia</b> — historicamente próxima de topos de ciclo.";
 }
 
-function cell(k,v,sub,score){
+function cell(k,v,sub,score,descKey){
   const bar = score!=null
     ? `<div class="mini"><i style="width:${Math.max(2,Math.min(100,score))}%;background:${heat(score)}"></i></div>` : "";
-  return `<div class="cell"><div class="k">${k}</div><div class="v">${v}</div>
+  const desc=descKey&&DESCRICOES[descKey]?DESCRICOES[descKey]:"";
+  const help=desc?`<span class="help" data-desc="${desc.replace(/"/g,'&quot;')}">?</span>`:"";
+  return `<div class="cell"><div class="k">${k}${help}</div><div class="v">${v}</div>
     ${sub?`<div class="sub">${sub}</div>`:""}${bar}</div>`;
 }
 
 function render(d){
   const m=d.models||{}, mk=d.market||{}, btc=mk.btc||{}, cb=d.cbbi||{},
-        dv=d.derivatives||{}, fg=d.fear_greed||{}, net=d.network||{}, cy=d.cycle||{};
+        dv=d.derivatives||{}, fg=d.fear_greed||{}, net=d.network||{}, cy=d.cycle||{},
+        ins=d.insights||{}, as=d.altseason||{};
 
   document.getElementById("stamp").innerHTML =
     `atualizado<br>${d.generated_at_br||"—"}`;
@@ -221,47 +357,71 @@ function render(d){
     </div>
   </div>`;
 
+  // ---------- insights (leitura descritiva do momento)
+  if(ins.resumo){
+    const obsHtml=(ins.observacoes||[]).map(o=>
+      `<div class="ob ${o.temp}"><span class="dot"></span><span>${o.texto}</span></div>`).join("");
+    h+=`<div class="insights">
+      <div class="lead">${ins.resumo}</div>
+      <div class="obs">${obsHtml}</div>
+      <div class="disc">${ins.disclaimer||""}</div>
+    </div>`;
+  }
+
   // ---------- métricas de ciclo (CBBI)
   const ordem=["picycle","mvrv","puell","rupl","rhodl","2yma","reserverisk","trolololo","woobull"];
   const metricas=ordem.filter(k=>cb[k]).map(k=>
-    cell(cb[k].label, cb[k].score.toFixed(0), "0 = fundo · 100 = topo", cb[k].score));
+    cell(cb[k].label, cb[k].score.toFixed(0), "0 = fundo · 100 = topo", cb[k].score, k));
   if(metricas.length) h+=`<section><h2>Métricas de ciclo</h2>
-    <div class="grid">${metricas.join("")}</div></section>`;
+    <div class="grid">${cell("CBBI (confiança de topo)", conf!=null?conf.toFixed(0):"—", "0 = fundo · 100 = topo", conf, "cbbi")}${metricas.join("")}</div></section>`;
 
   // ---------- modelos de preço
   const pi=m.pi_cycle_gap_pct;
+  const sr=m.stoch_rsi||{};
+  const srBadge=sr.zone?`<span class="zone-badge zone-${sr.zone}">${sr.zone}</span>`:"";
   h+=`<section><h2>Preço contra os modelos</h2><div class="grid">
-    ${cell("Múltiplo de Mayer","x"+fmtN(m.mayer_multiple,2),"preço ÷ MM200 · &lt;1 histórico barato")}
-    ${cell("Média de 200 dias",fmtUSD(m.ma200,0))}
-    ${cell("Média de 2 anos","x"+fmtN(m.ma730_multiple,2),fmtUSD(m.ma730,0)+" · suporte estrutural")}
+    ${cell("Múltiplo de Mayer","x"+fmtN(m.mayer_multiple,2),"preço ÷ MM200 · &lt;1 histórico barato",null,"mayer")}
+    ${cell("Média de 200 dias",fmtUSD(m.ma200,0),"",null,"ma200")}
+    ${cell("Média de 2 anos","x"+fmtN(m.ma730_multiple,2),fmtUSD(m.ma730,0)+" · suporte estrutural",null,"ma730")}
     ${cell("Pi Cycle Top", pi==null?"—":(pi>=0?"cruzou ⚠":fmtN(Math.abs(pi),0)+"% abaixo"),
-           "111d vs 350d ×2")}
-    ${cell("Topo histórico",fmtUSD(m.ath,0))}
-    ${cell("No ano","<span class='"+cls(m.ytd_pct)+"'>"+fmtPct(m.ytd_pct)+"</span>")}
+           "111d vs 350d ×2",null,"pi_top")}
+    ${cell("Stoch RSI", (sr.value!=null?sr.value.toFixed(0):"—")+srBadge, "momentum de curto prazo", sr.value, "stochrsi")}
+    ${cell("Topo histórico",fmtUSD(m.ath,0),"",null,"ath")}
+    ${cell("No ano","<span class='"+cls(m.ytd_pct)+"'>"+fmtPct(m.ytd_pct)+"</span>","",null,"ytd")}
   </div></section>`;
+
+  // ---------- gráfico do BTC com linhas de ciclo
+  h+=`<section><h2>BTC com linhas de ciclo</h2>
+    <div class="chartbox">
+      <div class="chart-toolbar" id="chartToolbar"></div>
+      <div class="chart-wrap"><canvas id="btcChart"></canvas></div>
+      <div class="chart-legend" id="chartLegend"></div>
+      <div class="chart-note" id="chartNote"></div>
+    </div></section>`;
 
   // ---------- risco
   h+=`<section><h2>Risco e posicionamento</h2><div class="grid">
     ${cell("Funding rate","<span class='"+cls(dv.funding_rate_pct)+"'>"+fmtPct(dv.funding_rate_pct,4)+"</span>",
-           "positivo = comprados pagando")}
-    ${cell("Open interest","US$ "+big(dv.open_interest_usd), fmtN(dv.open_interest_btc,0)+" BTC")}
-    ${cell("Medo & Ganância", fg.value??"—", fg.label||"", fg.value)}
-    ${cell("Dominância BTC", fmtLvl((mk.dominance||{}).btc), "ETH "+fmtLvl((mk.dominance||{}).eth))}
+           "positivo = comprados pagando",null,"funding")}
+    ${cell("Open interest","US$ "+big(dv.open_interest_usd), fmtN(dv.open_interest_btc,0)+" BTC",null,"oi")}
+    ${cell("Medo & Ganância", fg.value??"—", fg.label||"", fg.value,"fng")}
+    ${cell("Altcoin Season", as.value!=null?as.value.toFixed(0):"—", as.source||"", as.value,"altseason")}
+    ${cell("Dominância BTC", fmtLvl((mk.dominance||{}).btc), "ETH "+fmtLvl((mk.dominance||{}).eth),null,"dominance")}
     ${cell("Cap. total do mercado","US$ "+big(mk.total_mcap),
-           "<span class='"+cls(mk.total_mcap_chg24h)+"'>"+fmtPct(mk.total_mcap_chg24h)+"</span> em 24h")}
+           "<span class='"+cls(mk.total_mcap_chg24h)+"'>"+fmtPct(mk.total_mcap_chg24h)+"</span> em 24h",null,"mcap")}
     ${cell("Dias desde o halving", cy.days_since_halving??"—",
-           cy.est_next_halving?("próximo ≈ "+cy.est_next_halving):"")}
+           cy.est_next_halving?("próximo ≈ "+cy.est_next_halving):"",null,"halving")}
   </div></section>`;
 
   // ---------- rede
   h+=`<section><h2>Rede</h2><div class="grid">
-    ${cell("Hashrate", net.hashrate?big(net.hashrate/1e18)+" EH/s":"—")}
+    ${cell("Hashrate", net.hashrate?big(net.hashrate/1e18)+" EH/s":"—","",null,"hashrate")}
     ${cell("Próximo ajuste de dificuldade",
            "<span class='"+cls(net.difficulty_change_pct)+"'>"+fmtPct(net.difficulty_change_pct)+"</span>",
-           (net.blocks_to_retarget??"—")+" blocos")}
+           (net.blocks_to_retarget??"—")+" blocos",null,"difficulty")}
     ${cell("Taxa (rápida)", net.fee_fast!=null?net.fee_fast+" sat/vB":"—",
-           net.fee_economy!=null?("econômica "+net.fee_economy+" sat/vB"):"")}
-    ${cell("Altura do bloco", net.block_height?fmtN(net.block_height,0):"—")}
+           net.fee_economy!=null?("econômica "+net.fee_economy+" sat/vB"):"",null,"fees")}
+    ${cell("Altura do bloco", net.block_height?fmtN(net.block_height,0):"—","",null,"blockheight")}
   </div></section>`;
 
   // ---------- altcoins
@@ -283,8 +443,37 @@ function render(d){
     }).join("");
     h+=`<section><h2>Altcoins</h2><table>
       <thead><tr><th>Ativo</th><th>Preço</th><th>24h</th><th>7d</th>
-        <th>7d vs BTC</th><th class="hide">Cap.</th></tr></thead>
+        <th>7d vs BTC <span class="help" data-desc="${DESCRICOES.vs_btc.replace(/"/g,'&quot;')}">?</span></th><th class="hide">Cap.</th></tr></thead>
       <tbody>${linhas}</tbody></table></section>`;
+  }
+
+  // ---------- fluxos de ETF (Farside)
+  const etf=d.etf||{};
+  const etfOrder=["BTC","ETH","SOL","HYPE"];
+  const etfRows=etfOrder.filter(a=>etf[a]).map(a=>{
+    const e=etf[a];
+    const f=(v)=>v==null?"—":(v>=0?"+":"")+fmtN(v,1);
+    const c=(v)=>v==null?"nul":v>=0?"up":"down";
+    return `<tr>
+      <td>${a}</td>
+      <td class="${c(e.last_day)}">${f(e.last_day)}</td>
+      <td class="${c(e.week)}">${f(e.week)}</td>
+      <td class="${c(e.month)}">${f(e.month)}</td>
+      <td class="hide">${e.cumulative!=null?fmtN(e.cumulative,0):"—"}</td>
+    </tr>`;
+  }).join("");
+  if(etfRows){
+    h+=`<section><h2>Fluxos de ETF <span class="help" data-desc="Entradas (verde) e saídas (vermelho) de capital nos ETFs spot, em milhões de dólares. Fluxo positivo = capital institucional entrando. Fonte: Farside Investors.">?</span></h2>
+      <table>
+        <thead><tr><th>Ativo</th><th>Último dia</th><th>Semana</th><th>Mês</th>
+          <th class="hide">Acum. (US$mi)</th></tr></thead>
+        <tbody>${etfRows}</tbody></table>
+      <div class="chart-note">Valores em US$ milhões. "Semana" e "Mês" somam ~5 e ~21 pregões. Fonte: Farside Investors.</div>
+    </section>`;
+  } else {
+    h+=`<section><h2>Fluxos de ETF</h2>
+      <div class="etf-off">Não foi possível ler os fluxos de ETF nesta atualização
+      (a Farside pode ter mudado o layout). O restante do painel segue normal.</div></section>`;
   }
 
   // ---------- macro
@@ -302,6 +491,9 @@ function render(d){
 
   document.getElementById("app").innerHTML=h;
 
+  // Liga os tooltips de descrição em todas as métricas.
+  wireTooltips();
+
   // saúde das fontes
   const src=d.sources||{};
   document.getElementById("health").innerHTML=Object.entries(src).map(([n,s])=>
@@ -317,6 +509,144 @@ function render(d){
     locale:"br", importanceFilter:"0,1", countryFilter:"us"
   });
   document.querySelector(".tradingview-widget-container").appendChild(s);
+
+  // ---------- gráfico do BTC (carrega chart.json à parte)
+  loadChart();
+}
+
+// Cores das linhas, alinhadas à paleta do painel.
+const CHART_COLORS = {
+  price:    "#E8ECF5",
+  sma200w:  "#2DB6A3",
+  sma300w:  "#4F9BE8",
+  sma400w:  "#8B7FE8",
+  mvrv080:  "#E5484D",
+  gcc:      "#E8C547",
+  cvdd:     "#E88C3A",
+  balanced: "#5AC8A0",
+  lth:      "#E86AA6",
+};
+let btcChartInstance = null;
+let chartLogScale = true;
+
+function loadChart(){
+  fetch("./chart.json?t="+Date.now())
+    .then(r=>{ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); })
+    .then(drawChart)
+    .catch(()=>{
+      const note=document.getElementById("chartNote");
+      if(note) note.innerHTML="Gráfico ainda não gerado. Rode o workflow uma vez para criar o <b>chart.json</b>.";
+    });
+}
+
+function drawChart(c){
+  const canvas=document.getElementById("btcChart");
+  if(!canvas || !window.Chart) return;
+
+  const pts=c.points||[];
+  const labels=pts.map(p=>p.t);
+
+  // Linhas horizontais (níveis) desenhadas via plugin.
+  const levels=[];
+  const al=c.auto_levels||{};
+  if(al.mvrv080 && al.mvrv080.value!=null)
+    levels.push({label:al.mvrv080.label, value:al.mvrv080.value, color:CHART_COLORS.mvrv080, dash:true});
+  (c.manual_levels||[]).forEach(l=>{
+    if(l.value!=null) levels.push({label:l.label, value:l.value, color:CHART_COLORS[l.key]||"#999", dash:true});
+  });
+
+  const mkLine=(key,label,width)=>({
+    label, data:pts.map(p=>p[key]),
+    borderColor:CHART_COLORS[key], backgroundColor:CHART_COLORS[key],
+    borderWidth:width, pointRadius:0, tension:.1, spanGaps:true,
+  });
+
+  const datasets=[
+    mkLine("price","Preço BTC",1.8),
+    mkLine("sma200w","SMA 200s",1.3),
+    mkLine("sma300w","SMA 300s",1.3),
+    mkLine("sma400w","SMA 400s",1.3),
+  ];
+
+  // Plugin que desenha as linhas horizontais de suporte.
+  const levelPlugin={
+    id:"levels",
+    afterDraw(chart){
+      const {ctx,chartArea:{left,right},scales:{y}}=chart;
+      ctx.save();
+      levels.forEach(lv=>{
+        const yp=y.getPixelForValue(lv.value);
+        if(yp<chart.chartArea.top||yp>chart.chartArea.bottom) return;
+        ctx.beginPath(); ctx.setLineDash([5,4]);
+        ctx.strokeStyle=lv.color; ctx.lineWidth=1.2;
+        ctx.moveTo(left,yp); ctx.lineTo(right,yp); ctx.stroke();
+      });
+      ctx.restore();
+    }
+  };
+
+  if(btcChartInstance) btcChartInstance.destroy();
+  btcChartInstance=new Chart(canvas,{
+    type:"line",
+    data:{labels,datasets},
+    plugins:[levelPlugin],
+    options:{
+      responsive:true, maintainAspectRatio:false, animation:false,
+      interaction:{mode:"index",intersect:false},
+      scales:{
+        x:{type:"time",time:{unit:"year"},
+           grid:{color:"rgba(38,51,77,.4)"},
+           ticks:{color:"#4E5D78",font:{family:"JetBrains Mono",size:10}}},
+        y:{type:chartLogScale?"logarithmic":"linear",position:"right",
+           grid:{color:"rgba(38,51,77,.4)"},
+           ticks:{color:"#4E5D78",font:{family:"JetBrains Mono",size:10},
+             callback:v=>{
+               if(v>=1000)return "$"+(v/1000).toFixed(0)+"k";
+               return "$"+v;
+             }}},
+      },
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          backgroundColor:"#0D1220",borderColor:"#26334D",borderWidth:1,
+          titleColor:"#E8ECF5",bodyColor:"#7C8CA8",
+          titleFont:{family:"JetBrains Mono",size:11},
+          bodyFont:{family:"JetBrains Mono",size:10},
+          callbacks:{
+            title:(it)=>new Date(it[0].parsed.x).toLocaleDateString("pt-BR"),
+            label:(it)=>it.dataset.label+": $"+(it.parsed.y??0).toLocaleString("pt-BR",{maximumFractionDigits:0}),
+          }
+        }
+      }
+    }
+  });
+
+  // Legenda
+  const legItems=[
+    ...datasets.map(d=>({label:d.label,color:d.borderColor,dash:false})),
+    ...levels.map(l=>({label:l.label,color:l.color,dash:true})),
+  ];
+  document.getElementById("chartLegend").innerHTML=legItems.map(i=>
+    `<span style="color:${i.color}"><i class="${i.dash?'dash':''}" style="background:${i.dash?'':i.color};color:${i.color}"></i>
+     <span style="color:var(--muted)">${i.label}</span></span>`).join("");
+
+  // Toolbar (escala log/linear)
+  document.getElementById("chartToolbar").innerHTML=
+    `<button id="btnLog" class="${chartLogScale?'on':''}">Log</button>
+     <button id="btnLin" class="${chartLogScale?'':'on'}">Linear</button>`;
+  document.getElementById("btnLog").onclick=()=>{chartLogScale=true;drawChart(c);};
+  document.getElementById("btnLin").onclick=()=>{chartLogScale=false;drawChart(c);};
+
+  // Nota sobre linhas manuais ausentes
+  const faltando=(c.manual_levels||[]).filter(l=>l.value==null).map(l=>l.label);
+  const note=document.getElementById("chartNote");
+  if(faltando.length){
+    note.innerHTML="↳ Linhas on-chain manuais ainda sem valor: <b>"+faltando.join(", ")+
+      "</b>. Preencha em <b>scripts/config.py</b> (MANUAL_CHART_LINES) quando o Campos divulgar. "+
+      "A linha MVRV 0,80 é uma aproximação a partir da média de 200 dias.";
+  } else {
+    note.innerHTML="A linha MVRV 0,80 é uma aproximação a partir da média de 200 dias.";
+  }
 }
 
 fetch("./data.json?t="+Date.now())
