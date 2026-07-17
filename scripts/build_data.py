@@ -699,10 +699,25 @@ def main():
 
     live_price = (market or {}).get("btc", {}).get("price")
     price_series = (cbbi or {}).get("price_series", {})
-    models = price_models(price_series, live_price)
-    clock = cycle_clock((net or {}).get("block_height"))
-    chart = build_chart_series(price_series, (cbbi or {}).get("metrics", {}), MANUAL_CHART_LINES)
-    insights = build_insights((cbbi or {}).get("metrics", {}), models, derivs, fng, market, altseason)
+
+    # As funções de processamento (abaixo) não são fontes de rede, mas ainda
+    # podem quebrar com dados inesperados. Blindamos cada uma: se falhar, vira
+    # None e o build continua — nunca deixamos o processamento derrubar tudo.
+    def safe(nome, fn):
+        try:
+            return fn()
+        except Exception as exc:  # noqa: BLE001
+            SOURCES[nome] = {"ok": False, "detail": f"proc: {type(exc).__name__}: {exc}"}
+            print(f"[falha proc] {nome}: {exc}", file=sys.stderr)
+            traceback.print_exc(file=sys.stderr)
+            return None
+
+    models = safe("Modelos de preço", lambda: price_models(price_series, live_price))
+    clock = safe("Relógio de ciclo", lambda: cycle_clock((net or {}).get("block_height")))
+    chart = safe("Gráfico", lambda: build_chart_series(
+        price_series, (cbbi or {}).get("metrics", {}), MANUAL_CHART_LINES))
+    insights = safe("Insights", lambda: build_insights(
+        (cbbi or {}).get("metrics", {}), models, derivs, fng, market, altseason))
 
     data = {
         "generated_at": now.isoformat(),
@@ -733,14 +748,17 @@ def main():
         print(f"chart.json gravado — {len(chart['points'])} pontos semanais")
 
     ok = sum(1 for s in SOURCES.values() if s["ok"])
-    print(f"data.json gravado — {ok}/{len(SOURCES)} fontes responderam")
+    print(f"data.json gravado — {ok}/{len(SOURCES)} itens responderam")
     for name, st in SOURCES.items():
         print(f"  {'OK  ' if st['ok'] else 'FALHA'} {name}: {st['detail']}")
 
-    # O build nunca falha por causa de uma fonte, mas se TUDO caiu algo está
-    # errado de verdade (rede, bloqueio) e o Action deve gritar.
-    if ok == 0:
-        sys.exit("Nenhuma fonte respondeu — abortando para não gravar painel vazio.")
+    # Só abortamos se as FONTES DE REDE principais caíram todas. As entradas de
+    # processamento (Modelos, Gráfico, Insights, Relógio) não contam aqui —
+    # elas dependem das fontes, não são fontes.
+    proc_names = {"Modelos de preço", "Relógio de ciclo", "Gráfico", "Insights"}
+    fontes_ok = sum(1 for n, s in SOURCES.items() if n not in proc_names and s["ok"])
+    if fontes_ok == 0:
+        sys.exit("Nenhuma fonte de rede respondeu — abortando para não gravar painel vazio.")
 
 
 if __name__ == "__main__":
