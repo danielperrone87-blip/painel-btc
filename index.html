@@ -622,7 +622,13 @@ function drawChart(c){
     }
   };
 
-  if(btcChartInstance) btcChartInstance.destroy();
+  // Garante que nenhum gráfico antigo ocupe o canvas (evita o erro
+  // "Canvas is already in use"). Cobre tanto nossa instância quanto
+  // qualquer uma que o Chart.js tenha registrado por conta própria.
+  if(btcChartInstance){ btcChartInstance.destroy(); btcChartInstance=null; }
+  const existing = Chart.getChart(canvas);
+  if(existing) existing.destroy();
+
   btcChartInstance=new Chart(canvas,{
     type:"line",
     data:{labels,datasets},
