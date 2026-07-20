@@ -532,10 +532,11 @@ def _etf_summary(daily, hist_total):
 
 @source("ETF (Farside)")
 def fetch_etf_flows():
-    """Fluxos de ETF (BTC, ETH, SOL, HYPE) da Farside Investors, por scraping.
-    Cada ativo é isolado: um que falhe não derruba os outros.
-    A Farside bloqueia requisições sem User-Agent de navegador, então enviamos
-    um cabeçalho de navegador comum."""
+    """Fluxos de ETF (BTC, ETH, SOL, HYPE) da Farside Investors.
+    A Farside fica atrás do Cloudflare, que bloqueia o IP do GitHub Actions
+    (datacenter). Por isso tentamos primeiro direto e, se falhar, via um proxy
+    de leitura gratuito (r.jina.ai), que busca a página por nós.
+    Cada ativo é isolado: um que falhe não derruba os outros."""
     if not ETF_ENABLED:
         raise RuntimeError("ETF desativado em config (ETF_ENABLED=False)")
     headers = {
@@ -544,13 +545,28 @@ def fetch_etf_flows():
                       "Chrome/120.0 Safari/537.36",
         "Accept": "text/html,application/xhtml+xml",
     }
-    out = {}
-    erros = []
-    for asset, url in ETF_SOURCES.items():
+
+    def buscar(url):
+        # 1ª tentativa: direto. 2ª: via proxy de leitura (contorna Cloudflare).
         try:
             r = SESSION.get(url, timeout=HTTP_TIMEOUT, headers=headers)
             r.raise_for_status()
             daily, hist = _parse_farside(r.text)
+            if daily:
+                return daily, hist
+        except Exception:  # noqa: BLE001
+            pass
+        # proxy: r.jina.ai devolve o conteúdo já renderizado em texto/markdown
+        r = SESSION.get("https://r.jina.ai/" + url, timeout=HTTP_TIMEOUT + 15,
+                        headers={"User-Agent": headers["User-Agent"]})
+        r.raise_for_status()
+        return _parse_farside(r.text)
+
+    out = {}
+    erros = []
+    for asset, url in ETF_SOURCES.items():
+        try:
+            daily, hist = buscar(url)
             summ = _etf_summary(daily, hist)
             if summ:
                 out[asset] = summ
