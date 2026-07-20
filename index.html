@@ -534,6 +534,7 @@ const CHART_COLORS = {
 };
 let btcChartInstance = null;
 let chartLogScale = true;
+let chartRangeYears = 2;   // intervalo visível: 2, 4 ou 0 (tudo)
 
 function loadChart(attempt){
   attempt = attempt || 0;
@@ -579,7 +580,16 @@ function drawChart(c){
   const canvas=document.getElementById("btcChart");
   if(!canvas || !window.Chart) return;
 
-  const pts=c.points||[];
+  const allPts=c.points||[];
+  // Recorta o intervalo visível (últimos N anos), mantendo o histórico completo
+  // guardado em allPts para quando o usuário quiser ver "tudo".
+  let pts=allPts;
+  if(chartRangeYears>0 && allPts.length){
+    const ultimo=allPts[allPts.length-1].t;
+    const corte=ultimo - chartRangeYears*365*24*60*60*1000;
+    const filtrado=allPts.filter(p=>p.t>=corte);
+    if(filtrado.length>5) pts=filtrado;   // só aplica se sobrar dado suficiente
+  }
   // Rótulos como texto (dd/mm/aaaa) em vez de timestamps — assim não
   // dependemos do adaptador de datas do Chart.js, que é uma peça frágil.
   const labels=pts.map(p=>{
@@ -646,11 +656,17 @@ function drawChart(c){
            ticks:{color:"#4E5D78",font:{family:"JetBrains Mono",size:10},
              maxTicksLimit:10, autoSkip:true,
              callback:function(val,idx){
-               // mostra só o ANO, e só quando muda, pra não poluir o eixo
                const lab=this.getLabelForValue(val);
-               const ano=(lab||"").split("/")[2];
+               const partes=(lab||"").split("/");  // [dd, mm, aaaa]
+               if(partes.length<3) return lab;
+               // intervalo curto (2-4 anos): mostra mês/ano; longo: só o ano
+               if(chartRangeYears>0 && chartRangeYears<=4){
+                 const antLab=idx>0?(this.getLabelForValue(idx-1)||"").split("/"):null;
+                 const mudouMes=!antLab||partes[1]!==antLab[1]||partes[2]!==antLab[2];
+                 return mudouMes?(partes[1]+"/"+partes[2].slice(2)):"";
+               }
                const antAno=idx>0?(this.getLabelForValue(idx-1)||"").split("/")[2]:null;
-               return ano!==antAno?ano:"";
+               return partes[2]!==antAno?partes[2]:"";
              }}},
         y:{type:chartLogScale?"logarithmic":"linear",position:"right",
            grid:{color:"rgba(38,51,77,.4)"},
@@ -685,12 +701,19 @@ function drawChart(c){
     `<span style="color:${i.color}"><i class="${i.dash?'dash':''}" style="background:${i.dash?'':i.color};color:${i.color}"></i>
      <span style="color:var(--muted)">${i.label}</span></span>`).join("");
 
-  // Toolbar (escala log/linear)
+  // Toolbar: escala (log/linear) + intervalo (2a/4a/tudo)
+  const mkBtn=(id,txt,on)=>`<button id="${id}" class="${on?'on':''}">${txt}</button>`;
   document.getElementById("chartToolbar").innerHTML=
-    `<button id="btnLog" class="${chartLogScale?'on':''}">Log</button>
-     <button id="btnLin" class="${chartLogScale?'':'on'}">Linear</button>`;
+    mkBtn("btnLog","Log",chartLogScale)+mkBtn("btnLin","Linear",!chartLogScale)+
+    '<span style="width:10px"></span>'+
+    mkBtn("btnR2","2 anos",chartRangeYears===2)+
+    mkBtn("btnR4","4 anos",chartRangeYears===4)+
+    mkBtn("btnRall","Tudo",chartRangeYears===0);
   document.getElementById("btnLog").onclick=()=>{chartLogScale=true;drawChart(c);};
   document.getElementById("btnLin").onclick=()=>{chartLogScale=false;drawChart(c);};
+  document.getElementById("btnR2").onclick=()=>{chartRangeYears=2;drawChart(c);};
+  document.getElementById("btnR4").onclick=()=>{chartRangeYears=4;drawChart(c);};
+  document.getElementById("btnRall").onclick=()=>{chartRangeYears=0;drawChart(c);};
 
   // Nota sobre linhas manuais ausentes
   const faltando=(c.manual_levels||[]).filter(l=>l.value==null).map(l=>l.label);
