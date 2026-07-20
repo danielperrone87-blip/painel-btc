@@ -12,12 +12,11 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-adapter-date-fns/3.0.0/chartjs-adapter-date-fns.bundle.min.js"></script>
 <script>
 // Fallback: se o CDN principal falhar, carrega o Chart.js de um espelho (jsdelivr).
+// Não usamos mais o adaptador de datas (o eixo X usa categorias), então só o core.
 if (typeof Chart === "undefined") {
   document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"><\/script>');
-  document.write('<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"><\/script>');
 }
 </script>
 <style>
@@ -581,7 +580,12 @@ function drawChart(c){
   if(!canvas || !window.Chart) return;
 
   const pts=c.points||[];
-  const labels=pts.map(p=>p.t);
+  // Rótulos como texto (dd/mm/aaaa) em vez de timestamps — assim não
+  // dependemos do adaptador de datas do Chart.js, que é uma peça frágil.
+  const labels=pts.map(p=>{
+    const d=new Date(p.t);
+    return d.toLocaleDateString("pt-BR");
+  });
 
   // Linhas horizontais (níveis) desenhadas via plugin.
   const levels=[];
@@ -637,9 +641,17 @@ function drawChart(c){
       responsive:true, maintainAspectRatio:false, animation:false,
       interaction:{mode:"index",intersect:false},
       scales:{
-        x:{type:"time",time:{unit:"year"},
+        x:{type:"category",
            grid:{color:"rgba(38,51,77,.4)"},
-           ticks:{color:"#4E5D78",font:{family:"JetBrains Mono",size:10}}},
+           ticks:{color:"#4E5D78",font:{family:"JetBrains Mono",size:10},
+             maxTicksLimit:10, autoSkip:true,
+             callback:function(val,idx){
+               // mostra só o ANO, e só quando muda, pra não poluir o eixo
+               const lab=this.getLabelForValue(val);
+               const ano=(lab||"").split("/")[2];
+               const antAno=idx>0?(this.getLabelForValue(idx-1)||"").split("/")[2]:null;
+               return ano!==antAno?ano:"";
+             }}},
         y:{type:chartLogScale?"logarithmic":"linear",position:"right",
            grid:{color:"rgba(38,51,77,.4)"},
            ticks:{color:"#4E5D78",font:{family:"JetBrains Mono",size:10},
@@ -656,7 +668,7 @@ function drawChart(c){
           titleFont:{family:"JetBrains Mono",size:11},
           bodyFont:{family:"JetBrains Mono",size:10},
           callbacks:{
-            title:(it)=>new Date(it[0].parsed.x).toLocaleDateString("pt-BR"),
+            title:(it)=>it[0].label,
             label:(it)=>it.dataset.label+": $"+(it.parsed.y??0).toLocaleString("pt-BR",{maximumFractionDigits:0}),
           }
         }
