@@ -435,19 +435,31 @@ def fetch_network():
 
 @source("Stooq (macro)")
 def fetch_macro():
-    """Índices macro da Stooq. Buscamos UM símbolo por vez: o modo de vários
-    símbolos numa URL só ficou instável (404). Um símbolo por requisição é
-    mais robusto — se um falhar, os outros ainda vêm. Header de navegador
-    ajuda a evitar bloqueio."""
-    headers = {"User-Agent": "Mozilla/5.0 (compatible; painel-btc/1.0)"}
+    """Índices macro da Stooq. A Stooq bloqueia o IP do GitHub Actions, então
+    buscamos via proxy (CodeTabs), um símbolo por vez. Se um símbolo falhar,
+    os outros ainda vêm."""
+    ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0 Safari/537.36"
     out = []
     falhas = []
     for sym, label in STOOQ_SYMBOLS.items():
+        # URL da Stooq para um símbolo em CSV
+        base = f"{STOOQ_BASE}?s={sym}&f=sd2t2ohlcv&h&e=csv"
+        texto = None
+        # tenta direto e, se falhar, via proxy
+        for alvo in (base, "https://api.codetabs.com/v1/proxy/?quest=" + base):
+            try:
+                r = SESSION.get(alvo, timeout=HTTP_TIMEOUT + 10,
+                                headers={"User-Agent": ua})
+                r.raise_for_status()
+                if "Date" in r.text or "," in r.text:
+                    texto = r.text
+                    break
+            except Exception:  # noqa: BLE001
+                continue
+        if not texto:
+            falhas.append(sym); continue
         try:
-            r = SESSION.get(STOOQ_BASE, timeout=HTTP_TIMEOUT, headers=headers,
-                            params={"s": sym, "f": "sd2t2ohlcv", "h": "", "e": "csv"})
-            r.raise_for_status()
-            rows = list(csv.DictReader(io.StringIO(r.text)))
+            rows = list(csv.DictReader(io.StringIO(texto)))
             if not rows:
                 falhas.append(sym); continue
             row = rows[0]
@@ -456,8 +468,7 @@ def fetch_macro():
                 falhas.append(sym); continue
             close = float(close); openp = float(openp)
             out.append({
-                "symbol": sym, "label": label,
-                "close": close,
+                "symbol": sym, "label": label, "close": close,
                 "chg_pct": (close / openp - 1) * 100 if openp else None,
                 "date": row.get("Date"),
             })
@@ -533,34 +544,35 @@ def _etf_summary(daily, hist_total):
 @source("ETF (Farside)")
 def fetch_etf_flows():
     """Fluxos de ETF (BTC, ETH, SOL, HYPE) da Farside Investors.
-    A Farside fica atrás do Cloudflare, que bloqueia o IP do GitHub Actions
-    (datacenter). Por isso tentamos primeiro direto e, se falhar, via um proxy
-    de leitura gratuito (r.jina.ai), que busca a página por nós.
-    Cada ativo é isolado: um que falhe não derruba os outros."""
+    A Farside fica atrás do Cloudflare, que bloqueia o IP do GitHub Actions.
+    Tentamos, em cascata: (1) direto, (2) proxy CodeTabs, (3) proxy AllOrigins.
+    Basta um funcionar. Cada ativo é isolado."""
     if not ETF_ENABLED:
         raise RuntimeError("ETF desativado em config (ETF_ENABLED=False)")
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                      "AppleWebKit/537.36 (KHTML, like Gecko) "
-                      "Chrome/120.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml",
-    }
+    ua = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+          "(KHTML, like Gecko) Chrome/120.0 Safari/537.36")
+
+    def vias(url):
+        # Ordem de tentativa. Proxies que buscam a página do lado servidor e
+        # devolvem o HTML/texto, contornando o bloqueio do Cloudflare.
+        from urllib.parse import quote
+        yield url, {"User-Agent": ua, "Accept": "text/html"}
+        yield "https://api.codetabs.com/v1/proxy/?quest=" + url, {"User-Agent": ua}
+        yield "https://api.allorigins.win/raw?url=" + quote(url, safe=""), {"User-Agent": ua}
 
     def buscar(url):
-        # 1ª tentativa: direto. 2ª: via proxy de leitura (contorna Cloudflare).
-        try:
-            r = SESSION.get(url, timeout=HTTP_TIMEOUT, headers=headers)
-            r.raise_for_status()
-            daily, hist = _parse_farside(r.text)
-            if daily:
-                return daily, hist
-        except Exception:  # noqa: BLE001
-            pass
-        # proxy: r.jina.ai devolve o conteúdo já renderizado em texto/markdown
-        r = SESSION.get("https://r.jina.ai/" + url, timeout=HTTP_TIMEOUT + 15,
-                        headers={"User-Agent": headers["User-Agent"]})
-        r.raise_for_status()
-        return _parse_farside(r.text)
+        ultimo_erro = None
+        for alvo, headers in vias(url):
+            try:
+                r = SESSION.get(alvo, timeout=HTTP_TIMEOUT + 15, headers=headers)
+                r.raise_for_status()
+                daily, hist = _parse_farside(r.text)
+                if daily:
+                    return daily, hist
+                ultimo_erro = "sem linhas"
+            except Exception as exc:  # noqa: BLE001
+                ultimo_erro = type(exc).__name__
+        raise RuntimeError(ultimo_erro or "falhou")
 
     out = {}
     erros = []
@@ -571,9 +583,9 @@ def fetch_etf_flows():
             if summ:
                 out[asset] = summ
             else:
-                erros.append(f"{asset}: sem linhas válidas")
+                erros.append(f"{asset}: sem dados")
         except Exception as exc:  # noqa: BLE001
-            erros.append(f"{asset}: {type(exc).__name__}")
+            erros.append(f"{asset}: {exc}")
     if not out:
         raise RuntimeError("nenhum ETF extraído — " + "; ".join(erros))
     if erros:
