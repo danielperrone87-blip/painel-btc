@@ -13,6 +13,13 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-adapter-date-fns/3.0.0/chartjs-adapter-date-fns.bundle.min.js"></script>
+<script>
+// Fallback: se o CDN principal falhar, carrega o Chart.js de um espelho (jsdelivr).
+if (typeof Chart === "undefined") {
+  document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"><\/script>');
+  document.write('<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"><\/script>');
+}
+</script>
 <style>
   :root{
     --bg:#0D1220; --surface:#151D30; --surface2:#1C2740; --line:#26334D;
@@ -529,15 +536,41 @@ const CHART_COLORS = {
 let btcChartInstance = null;
 let chartLogScale = true;
 
-function loadChart(){
+function loadChart(attempt){
+  attempt = attempt || 0;
+  const note=document.getElementById("chartNote");
+
+  // O Chart.js vem de CDN e pode demorar a carregar. Esperamos até 20 tentativas
+  // (10s) antes de desistir, em vez de falhar silenciosamente.
+  if(typeof Chart === "undefined"){
+    if(attempt < 20){
+      if(note) note.textContent="Carregando a biblioteca do gráfico…";
+      setTimeout(()=>loadChart(attempt+1), 500);
+      return;
+    }
+    if(note) note.innerHTML=
+      'A biblioteca do gráfico (Chart.js) não carregou — pode ser bloqueio de rede/extensão. '+
+      '<button onclick="loadChart(0)" style="margin-left:8px;padding:4px 10px;border-radius:7px;'+
+      'border:1px solid var(--line);background:var(--surface2);color:var(--text);'+
+      'cursor:pointer;font-family:var(--mono);font-size:11px">Tentar de novo</button>';
+    return;
+  }
+
   fetch("./chart.json?t="+Date.now())
     .then(r=>{ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); })
-    .then(drawChart)
+    .then(c=>{
+      try { drawChart(c); }
+      catch(err){
+        if(note) note.innerHTML='Erro ao desenhar o gráfico: '+err.message+
+          '. <button onclick="loadChart(0)" style="margin-left:8px;padding:4px 10px;border-radius:7px;'+
+          'border:1px solid var(--line);background:var(--surface2);color:var(--text);'+
+          'cursor:pointer;font-family:var(--mono);font-size:11px">Tentar de novo</button>';
+      }
+    })
     .catch(()=>{
-      const note=document.getElementById("chartNote");
       if(note) note.innerHTML=
-        'Aguardando o <b>chart.json</b> ser publicado (pode levar 1-2 min após rodar o workflow). '+
-        '<button onclick="loadChart()" style="margin-left:8px;padding:4px 10px;border-radius:7px;'+
+        'Não consegui carregar o <b>chart.json</b> (arquivo pode estar publicando). '+
+        '<button onclick="loadChart(0)" style="margin-left:8px;padding:4px 10px;border-radius:7px;'+
         'border:1px solid var(--line);background:var(--surface2);color:var(--text);'+
         'cursor:pointer;font-family:var(--mono);font-size:11px">Tentar de novo</button>';
     });
