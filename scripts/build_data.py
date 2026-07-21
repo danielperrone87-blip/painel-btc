@@ -542,11 +542,15 @@ def _etf_summary(daily, hist_total):
 
 
 def _parse_walletpilot(text):
-    """Extrai o Total (1D, 7D, 30D em US$mi) da WalletPilot. A linha 'Total'
-    da tabela markdown tem os três agregados já prontos."""
+    """Extrai o Total (1D, 7D, 30D em US$mi) da WalletPilot.
+    Robusto a dois formatos: markdown (linha 'Total' com |) e HTML cru.
+    Estratégia principal: os três cards do topo da página têm os valores
+    '1-Day Net Flows', '7-Day Net Flows', '30-Day Net Flows' em US$."""
+    import re as _re
+
     def money(s):
-        s = s.strip().replace("$", "").replace(",", "").replace("M", "")
-        s = s.replace("B", "").replace("+", "")
+        s = (s or "").strip().replace("$", "").replace(",", "")
+        s = s.replace("M", "").replace("+", "").replace("B", "")
         if s in ("", "—", "-"):
             return None
         try:
@@ -554,12 +558,31 @@ def _parse_walletpilot(text):
         except ValueError:
             return None
 
+    # limpa tags HTML, deixando o texto legível (funciona pra HTML cru)
+    plano = _re.sub(r"<[^>]+>", " ", text)
+    plano = plano.replace("&nbsp;", " ")
+
+    # --- via 1: cards "N-Day Net Flows ... +$X M"
+    def card(label):
+        # procura o rótulo e captura o primeiro valor em dólar após ele
+        m = _re.search(_re.escape(label) + r".{0,80}?([+-]?\$[\d.,]+)\s*[MB]",
+                       plano, _re.DOTALL | _re.IGNORECASE)
+        return money(m.group(1)) if m else None
+
+    d1 = card("1-Day Net Flows") or card("1 Day Net Flows")
+    d7 = card("7-Day Net Flows") or card("7 Day Net Flows")
+    d30 = card("30-Day Net Flows") or card("30 Day Net Flows")
+
+    if d1 is not None or d7 is not None or d30 is not None:
+        return {"last_day": d1, "last_date": None, "week": d7, "month": d30,
+                "cumulative": None, "unit": "US$ mi"}
+
+    # --- via 2 (fallback): linha 'Total' da tabela markdown
     for line in text.splitlines():
-        if "**Total**" in line or "| Total " in line:
+        if "**Total**" in line or _re.search(r"\|\s*Total\s*\|", line):
             cells = [c.strip() for c in line.split("|")]
             nums = [money(c) for c in cells if "$" in c and "M" in c]
             if len(nums) >= 3:
-                # cumulativo histórico não vem nessa linha; deixamos None
                 return {"last_day": nums[0], "last_date": None,
                         "week": nums[1], "month": nums[2],
                         "cumulative": None, "unit": "US$ mi"}
