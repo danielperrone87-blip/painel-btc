@@ -26,7 +26,7 @@ from config import (  # noqa: E402
     ALTCOINS, HALVINGS, BLOCKS_PER_HALVING, MA_WINDOWS, STOOQ_SYMBOLS,
     CBBI_URL, CG_BASE, OKX_BASE, FNG_URL, MEMPOOL_BASE, STOOQ_BASE,
     CMC_PUBLIC, HTTP_TIMEOUT, USER_AGENT, CBBI_LABELS, MANUAL_CHART_LINES,
-    ETF_ENABLED, ETF_SOURCES,
+    ETF_ENABLED, ETF_SOURCES, ETF_WALLETPILOT,
 )
 
 ROOT = Path(__file__).parent.parent
@@ -541,7 +541,49 @@ def _etf_summary(daily, hist_total):
     }
 
 
-@source("ETF (Farside)")
+def _parse_walletpilot(text):
+    """Extrai o Total (1D, 7D, 30D em US$mi) da WalletPilot. A linha 'Total'
+    da tabela markdown tem os três agregados já prontos."""
+    def money(s):
+        s = s.strip().replace("$", "").replace(",", "").replace("M", "")
+        s = s.replace("B", "").replace("+", "")
+        if s in ("", "—", "-"):
+            return None
+        try:
+            return float(s)
+        except ValueError:
+            return None
+
+    for line in text.splitlines():
+        if "**Total**" in line or "| Total " in line:
+            cells = [c.strip() for c in line.split("|")]
+            nums = [money(c) for c in cells if "$" in c and "M" in c]
+            if len(nums) >= 3:
+                # cumulativo histórico não vem nessa linha; deixamos None
+                return {"last_day": nums[0], "last_date": None,
+                        "week": nums[1], "month": nums[2],
+                        "cumulative": None, "unit": "US$ mi"}
+    return None
+
+
+@source("ETF (BTC via WalletPilot)")
+def fetch_etf_btc():
+    """Fluxo do ETF de Bitcoin via WalletPilot — fonte que não bloqueia e já
+    entrega 1D/7D/30D prontos."""
+    if not ETF_ENABLED:
+        raise RuntimeError("ETF desativado")
+    ua = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+          "(KHTML, like Gecko) Chrome/120.0 Safari/537.36")
+    r = SESSION.get(ETF_WALLETPILOT, timeout=HTTP_TIMEOUT + 10,
+                    headers={"User-Agent": ua})
+    r.raise_for_status()
+    summ = _parse_walletpilot(r.text)
+    if not summ:
+        raise RuntimeError("WalletPilot: linha Total não encontrada")
+    return summ
+
+
+@source("ETF alts (Farside)")
 def fetch_etf_flows():
     """Fluxos de ETF (BTC, ETH, SOL, HYPE) da Farside Investors.
     A Farside fica atrás do Cloudflare, que bloqueia o IP do GitHub Actions.
@@ -723,7 +765,15 @@ def main():
     net = fetch_network()
     macro = fetch_macro()
     altseason = fetch_altseason((market or {}).get("alts", []))
-    etf = fetch_etf_flows()
+    # ETF: BTC vem da WalletPilot (confiável); ETH/SOL/HYPE da Farside (via proxy).
+    etf_btc = fetch_etf_btc()
+    etf_alts = fetch_etf_flows()
+    etf = {}
+    if etf_btc:
+        etf["BTC"] = etf_btc
+    if etf_alts:
+        etf.update(etf_alts)
+    etf = etf or None
 
     live_price = (market or {}).get("btc", {}).get("price")
     price_series = (cbbi or {}).get("price_series", {})
