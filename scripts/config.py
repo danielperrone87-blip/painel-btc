@@ -76,8 +76,11 @@ CMC_PUBLIC     = "https://pro-api.coinmarketcap.com/public-api"
 # a Farside mudar o layout, a extração para e o bloco fica vazio com aviso —
 # mas nada mais no painel quebra (fonte isolada, como todas as outras).
 ETF_ENABLED = True
+# WalletPilot: fonte principal do BTC. Entrega 1D/7D/30D já agregados e NÃO
+# bloqueia leitura (diferente da Farside, que fica atrás do Cloudflare).
+# Cobre só Bitcoin. Para ETH/SOL/HYPE tentamos a Farside via proxy.
+ETF_WALLETPILOT = "https://www.walletpilot.com/bitcoin-tracker/etfs"
 ETF_SOURCES = {
-    "BTC":  "https://farside.co.uk/btc/",
     "ETH":  "https://farside.co.uk/eth/",
     "SOL":  "https://farside.co.uk/sol/",
     "HYPE": "https://farside.co.uk/hyp/",
