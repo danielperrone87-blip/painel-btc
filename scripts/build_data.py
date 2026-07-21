@@ -630,8 +630,6 @@ def fetch_etf_flows():
             erros.append(f"{asset}: {exc}")
     if not out:
         raise RuntimeError("nenhum ETF extraído — " + "; ".join(erros))
-    if erros:
-        out["_partial"] = "; ".join(erros)   # registra falhas parciais
     return out
 
 
