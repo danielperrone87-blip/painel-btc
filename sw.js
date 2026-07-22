@@ -1,4 +1,4 @@
-const CACHE = "ciclo-btc-v10";
+const CACHE = "ciclo-btc-v11";
 const SHELL = ["./index.html", "./manifest.json", "./icon.svg"];
 
 self.addEventListener("install", e => {
