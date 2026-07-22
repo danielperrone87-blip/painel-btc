@@ -175,23 +175,57 @@ def _rsi(values, period=14):
     return rsis
 
 
-def stoch_rsi(prices, rsi_period=14, stoch_period=14):
-    """Stochastic RSI: onde o RSI está dentro da sua própria faixa recente.
-    0-100. <20 = sobrevendido, >80 = sobrecomprado. Leitura de momentum."""
-    rsis = _rsi(prices, rsi_period)
-    if len(rsis) < stoch_period:
+def _sma(vals, n):
+    """Média móvel simples do fim da série."""
+    if len(vals) < n:
         return None
-    window = rsis[-stoch_period:]
-    lo, hi = min(window), max(window)
-    cur = rsis[-1]
-    k = (cur - lo) / (hi - lo) * 100 if hi > lo else 50.0
+    return sum(vals[-n:]) / n
+
+
+def _rsi_series(prices, period=14):
+    """Alias legível para a série de RSI."""
+    return _rsi(prices, period)
+
+
+def stoch_rsi(prices, rsi_period=14, stoch_period=14, k_smooth=3, d_smooth=3):
+    """Stochastic RSI no padrão 14-14-3-3 (o mesmo do TradingView).
+
+    Mede onde o RSI está dentro da própria faixa recente. O %K é suavizado
+    por média de 3 e o %D é a média de 3 do %K — sem essa suavização o
+    indicador crava em 0/100 com facilidade, o que confunde a leitura.
+    <20 = sobrevendido · >80 = sobrecomprado."""
+    rsis = _rsi(prices, rsi_period)
+    if len(rsis) < stoch_period + k_smooth + d_smooth:
+        return None
+
+    # série crua do estocástico do RSI
+    cru = []
+    for i in range(stoch_period - 1, len(rsis)):
+        janela = rsis[i - stoch_period + 1: i + 1]
+        lo, hi = min(janela), max(janela)
+        cru.append((rsis[i] - lo) / (hi - lo) * 100 if hi > lo else 50.0)
+
+    # %K = média de 3 do cru ; %D = média de 3 do %K
+    k_serie = [sum(cru[i - k_smooth + 1: i + 1]) / k_smooth
+               for i in range(k_smooth - 1, len(cru))]
+    if not k_serie:
+        return None
+    d_serie = [sum(k_serie[i - d_smooth + 1: i + 1]) / d_smooth
+               for i in range(d_smooth - 1, len(k_serie))]
+
+    k = k_serie[-1]
+    d = d_serie[-1] if d_serie else k
+    rsi_atual = rsis[-1]
+
     if k < 20:
         zona = "sobrevendido"
     elif k > 80:
         zona = "sobrecomprado"
     else:
         zona = "neutro"
-    return {"value": round(k, 1), "rsi": round(cur, 1), "zone": zona}
+
+    return {"value": round(k, 1), "k": round(k, 1), "d": round(d, 1),
+            "rsi": round(rsi_atual, 1), "zone": zona}
 
 
 def build_chart_series(price_series, cbbi_metrics, manual_lines):
@@ -240,6 +274,20 @@ def build_chart_series(price_series, cbbi_metrics, manual_lines):
             "sma300w": round(sma_at(j, D300), 2) if sma_at(j, D300) else None,
             "sma400w": round(sma_at(j, D400), 2) if sma_at(j, D400) else None,
         })
+
+    # --- RSI semanal + média do RSI (o painel que o Campos usa embaixo)
+    closes_sem = [p["price"] for p in points]
+    rsis = _rsi(closes_sem, 14)
+    if rsis:
+        # rsis[k] corresponde ao ponto de índice (k + 14) na série semanal
+        offset = len(points) - len(rsis)
+        for k, val in enumerate(rsis):
+            idx = k + offset
+            if 0 <= idx < len(points):
+                points[idx]["rsi"] = round(val, 1)
+                # média de 14 do próprio RSI (a linha azul do gráfico dele)
+                if k >= 13:
+                    points[idx]["rsi_sma"] = round(sum(rsis[k - 13: k + 1]) / 14, 1)
 
     # MVRV 0.80: aproximação da linha de suporte que o Campos traça.
     # Realized Price ~ preço / MVRV atual; a 0.80 marca 80% desse valor.
