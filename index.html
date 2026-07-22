@@ -162,6 +162,7 @@ if (typeof Chart === "undefined") {
   .chart-toolbar button.on{background:var(--cold);color:#04211d;
     border-color:var(--cold);font-weight:600}
   .chart-wrap{position:relative;height:340px}
+  .rsi-wrap{position:relative;height:120px;margin-top:6px}
   .chart-legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:12px;
     font-family:var(--mono);font-size:10.5px;color:var(--muted)}
   .chart-legend span{display:inline-flex;align-items:center;gap:6px}
@@ -236,7 +237,7 @@ const DESCRICOES = {
   "pi_top": "Distância atual entre a média de 111 dias e a de 350 dias ×2. Quando encostam (0%), é o sinal de topo do Pi Cycle.",
   "ath": "Maior preço já atingido pelo Bitcoin (topo histórico).",
   "ytd": "Retorno acumulado do Bitcoin desde o dia 1º de janeiro do ano atual.",
-  "stochrsi": "Stochastic RSI: mede onde o momentum (RSI) está dentro da sua faixa recente. Abaixo de 20 = sobrevendido; acima de 80 = sobrecomprado. É leitura de curto prazo.",
+  "stochrsi": "Stochastic RSI (padrão 14-14-3-3): mede onde o RSI está dentro da sua faixa recente. Abaixo de 20 = sobrevendido; acima de 80 = sobrecomprado. O %K é a linha rápida e o %D a suavizada. É leitura de curto prazo — não confundir com o preço em si.",
   "funding": "Taxa de financiamento dos futuros perpétuos. Positiva = comprados pagam vendidos (otimismo alavancado); negativa = o contrário. Extremos sinalizam excesso de um lado.",
   "oi": "Open Interest: valor total de contratos futuros em aberto. Alta rápida indica mais alavancagem no mercado, o que aumenta o risco de liquidações em cascata.",
   "fng": "Índice de Medo e Ganância: resume o sentimento do mercado de 0 (medo extremo) a 100 (ganância extrema). Extremos costumam preceder reversões.",
@@ -391,7 +392,9 @@ function render(d){
     ${cell("Média de 2 anos","x"+fmtN(m.ma730_multiple,2),fmtUSD(m.ma730,0)+" · suporte estrutural",null,"ma730")}
     ${cell("Pi Cycle Top", pi==null?"—":(pi>=0?"cruzou ⚠":fmtN(Math.abs(pi),0)+"% abaixo"),
            "111d vs 350d ×2",null,"pi_top")}
-    ${cell("Stoch RSI", (sr.value!=null?sr.value.toFixed(0):"—")+srBadge, "momentum de curto prazo", sr.value, "stochrsi")}
+    ${cell("Stoch RSI", (sr.value!=null?sr.value.toFixed(0):"—")+srBadge,
+           (sr.d!=null?("%K "+sr.k.toFixed(0)+" · %D "+sr.d.toFixed(0)):"")+
+           (sr.rsi!=null?(" · RSI "+sr.rsi.toFixed(0)):""), sr.value, "stochrsi")}
     ${cell("Topo histórico",fmtUSD(m.ath,0),"",null,"ath")}
     ${cell("No ano","<span class='"+cls(m.ytd_pct)+"'>"+fmtPct(m.ytd_pct)+"</span>","",null,"ytd")}
   </div></section>`;
@@ -401,6 +404,7 @@ function render(d){
     <div class="chartbox">
       <div class="chart-toolbar" id="chartToolbar"></div>
       <div class="chart-wrap"><canvas id="btcChart"></canvas></div>
+      <div class="rsi-wrap"><canvas id="rsiChart"></canvas></div>
       <div class="chart-legend" id="chartLegend"></div>
       <div class="chart-note" id="chartNote"></div>
     </div></section>`;
@@ -546,8 +550,11 @@ const CHART_COLORS = {
   cvdd:     "#E88C3A",
   balanced: "#5AC8A0",
   lth:      "#E86AA6",
+  rsi:      "#E8C547",
+  rsi_sma:  "#4FB8E8",
 };
 let btcChartInstance = null;
+let rsiChartInstance = null;
 let chartLogScale = true;
 let chartRangeYears = 2;   // intervalo visível: 2, 4 ou 0 (tudo)
 
@@ -589,6 +596,75 @@ function loadChart(attempt){
         'border:1px solid var(--line);background:var(--surface2);color:var(--text);'+
         'cursor:pointer;font-family:var(--mono);font-size:11px">Tentar de novo</button>';
     });
+}
+
+function drawRsiPanel(pts, labels){
+  const canvas=document.getElementById("rsiChart");
+  if(!canvas || !window.Chart) return;
+
+  const temRsi=pts.some(p=>p.rsi!=null);
+  if(!temRsi){ canvas.style.display="none"; return; }
+  canvas.style.display="";
+
+  if(rsiChartInstance){ rsiChartInstance.destroy(); rsiChartInstance=null; }
+  const antigo=Chart.getChart(canvas);
+  if(antigo) antigo.destroy();
+
+  // Faixas de sobrecompra (70) e sobrevenda (30), como no gráfico clássico.
+  const faixas={
+    id:"faixasRsi",
+    beforeDatasetsDraw(chart){
+      const {ctx,chartArea:{left,right},scales:{y}}=chart;
+      const y70=y.getPixelForValue(70), y30=y.getPixelForValue(30);
+      ctx.save();
+      ctx.fillStyle="rgba(38,51,77,.28)";
+      ctx.fillRect(left,y70,right-left,y30-y70);
+      ctx.strokeStyle="rgba(124,140,168,.45)"; ctx.lineWidth=1;
+      ctx.setLineDash([4,4]);
+      [70,30].forEach(v=>{
+        const yp=y.getPixelForValue(v);
+        ctx.beginPath(); ctx.moveTo(left,yp); ctx.lineTo(right,yp); ctx.stroke();
+      });
+      ctx.restore();
+    }
+  };
+
+  rsiChartInstance=new Chart(canvas,{
+    type:"line",
+    data:{labels,datasets:[
+      {label:"RSI 14", data:pts.map(p=>p.rsi??null),
+       borderColor:CHART_COLORS.rsi, borderWidth:1.5, pointRadius:0,
+       tension:.15, spanGaps:true},
+      {label:"Média do RSI", data:pts.map(p=>p.rsi_sma??null),
+       borderColor:CHART_COLORS.rsi_sma, borderWidth:1.5, pointRadius:0,
+       tension:.15, spanGaps:true},
+    ]},
+    plugins:[faixas],
+    options:{
+      responsive:true, maintainAspectRatio:false, animation:false,
+      interaction:{mode:"index",intersect:false},
+      scales:{
+        x:{type:"category", grid:{display:false}, ticks:{display:false}},
+        y:{min:0,max:100,position:"right",
+           grid:{color:"rgba(38,51,77,.3)"},
+           ticks:{color:"#4E5D78",font:{family:"JetBrains Mono",size:9},
+                  stepSize:30}},
+      },
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          backgroundColor:"#0D1220",borderColor:"#26334D",borderWidth:1,
+          titleColor:"#E8ECF5",bodyColor:"#7C8CA8",
+          titleFont:{family:"JetBrains Mono",size:11},
+          bodyFont:{family:"JetBrains Mono",size:10},
+          callbacks:{
+            title:(it)=>it[0].label,
+            label:(it)=>it.dataset.label+": "+(it.parsed.y??0).toFixed(1),
+          }
+        }
+      }
+    }
+  });
 }
 
 function drawChart(c){
@@ -707,10 +783,17 @@ function drawChart(c){
     }
   });
 
+  // ---------- painel do RSI (embaixo do gráfico de preço)
+  drawRsiPanel(pts, labels);
+
   // Legenda
   const legItems=[
     ...datasets.map(d=>({label:d.label,color:d.borderColor,dash:false})),
     ...levels.map(l=>({label:l.label,color:l.color,dash:true})),
+    ...(pts.some(p=>p.rsi!=null)
+        ? [{label:"RSI 14",color:CHART_COLORS.rsi,dash:false},
+           {label:"Média do RSI",color:CHART_COLORS.rsi_sma,dash:false}]
+        : []),
   ];
   document.getElementById("chartLegend").innerHTML=legItems.map(i=>
     `<span style="color:${i.color}"><i class="${i.dash?'dash':''}" style="background:${i.dash?'':i.color};color:${i.color}"></i>
