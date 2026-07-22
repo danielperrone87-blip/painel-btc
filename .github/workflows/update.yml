@@ -34,6 +34,8 @@ jobs:
         run: pip install requests
 
       - name: Buscar dados e gerar data.json
+        env:
+          COINGLASS_API_KEY: ${{ secrets.COINGLASS_API_KEY }}
         run: python scripts/build_data.py
 
       - name: Publicar data.json
