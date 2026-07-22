@@ -468,18 +468,33 @@ function render(d){
       <td class="hide">${e.cumulative!=null?fmtN(e.cumulative,0):"—"}</td>
     </tr>`;
   }).join("");
+  const links=d.etf_links||{};
+  const linksHtml=Object.keys(links).length
+    ? '<div class="chart-note">Consultar também: '+
+      Object.entries(links).map(([n,u])=>
+        `<a href="${u}" target="_blank" rel="noopener" style="color:var(--cold)">${n}</a>`
+      ).join(" · ")+'</div>'
+    : "";
+  const soBtc = etfRows && !etf.ETH && !etf.SOL && !etf.HYPE;
+  const notaChave = soBtc
+    ? '<div class="chart-note">Só o BTC vem automático (fonte WalletPilot). Para trazer ETH, SOL e HYPE, '+
+      'crie uma chave gratuita em <b>coinglass.com → API</b> e salve no GitHub como secret '+
+      '<b>COINGLASS_API_KEY</b>.</div>'
+    : "";
+
   if(etfRows){
-    h+=`<section><h2>Fluxos de ETF <span class="help" data-desc="Entradas (verde) e saídas (vermelho) de capital nos ETFs spot, em milhões de dólares. Fluxo positivo = capital institucional entrando. Fonte: Farside Investors.">?</span></h2>
+    h+=`<section><h2>Fluxos de ETF <span class="help" data-desc="Entradas (verde) e saídas (vermelho) de capital nos ETFs spot, em milhões de dólares. Fluxo positivo = capital institucional entrando.">?</span></h2>
       <table>
         <thead><tr><th>Ativo</th><th>Último dia</th><th>Semana</th><th>Mês</th>
           <th class="hide">Acum. (US$mi)</th></tr></thead>
         <tbody>${etfRows}</tbody></table>
-      <div class="chart-note">Valores em US$ milhões. "Semana" e "Mês" somam ~5 e ~21 pregões. Fonte: Farside Investors.</div>
+      <div class="chart-note">Valores em US$ milhões. "Semana" e "Mês" somam ~5 e ~21 pregões.</div>
+      ${notaChave}${linksHtml}
     </section>`;
   } else {
     h+=`<section><h2>Fluxos de ETF</h2>
-      <div class="etf-off">Não foi possível ler os fluxos de ETF nesta atualização
-      (a Farside pode ter mudado o layout). O restante do painel segue normal.</div></section>`;
+      <div class="etf-off">Não foi possível ler os fluxos de ETF nesta atualização.
+      O restante do painel segue normal.${linksHtml}</div></section>`;
   }
 
   // ---------- macro
