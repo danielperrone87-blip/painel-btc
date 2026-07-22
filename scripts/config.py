@@ -76,14 +76,26 @@ CMC_PUBLIC     = "https://pro-api.coinmarketcap.com/public-api"
 # a Farside mudar o layout, a extração para e o bloco fica vazio com aviso —
 # mas nada mais no painel quebra (fonte isolada, como todas as outras).
 ETF_ENABLED = True
-# WalletPilot: fonte principal do BTC. Entrega 1D/7D/30D já agregados e NÃO
-# bloqueia leitura (diferente da Farside, que fica atrás do Cloudflare).
-# Cobre só Bitcoin. Para ETH/SOL/HYPE tentamos a Farside via proxy.
+# WalletPilot: fonte do BTC sem chave. Entrega 1D/7D/30D e não bloqueia.
 ETF_WALLETPILOT = "https://www.walletpilot.com/bitcoin-tracker/etfs"
-ETF_SOURCES = {
-    "ETH":  "https://farside.co.uk/eth/",
-    "SOL":  "https://farside.co.uk/sol/",
-    "HYPE": "https://farside.co.uk/hyp/",
+
+# CoinGlass: fonte OFICIAL de ETF (BTC, ETH, SOL, HYPE) via API com chave.
+# Como obter (grátis): crie conta em coinglass.com, vá em API, gere a chave,
+# e salve no GitHub como secret COINGLASS_API_KEY.
+# Sem a chave, o painel usa só o BTC da WalletPilot — nada quebra.
+COINGLASS_BASE = "https://open-api-v4.coinglass.com"
+COINGLASS_ETF_PATHS = {
+    "BTC":  "/api/bitcoin/etf/flow-history",
+    "ETH":  "/api/ethereum/etf/flow-history",
+    "SOL":  "/api/solana/etf/flow-history",
+    "HYPE": "/api/hype/etf/flow-history",
+}
+
+# Links para consulta manual (aparecem no painel, sempre úteis)
+ETF_LINKS = {
+    "CoinGlass": "https://www.coinglass.com/pt/etf",
+    "SoSoValue": "https://sosovalue.com/pt/assets/etf/us-btc-spot",
+    "Farside": "https://farside.co.uk/btc/",
 }
 
 HTTP_TIMEOUT = 25
