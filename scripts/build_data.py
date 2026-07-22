@@ -14,6 +14,7 @@ número inventado.
 import csv
 import io
 import json
+import os
 import sys
 import traceback
 from datetime import datetime, timezone, timedelta
@@ -26,7 +27,7 @@ from config import (  # noqa: E402
     ALTCOINS, HALVINGS, BLOCKS_PER_HALVING, MA_WINDOWS, STOOQ_SYMBOLS,
     CBBI_URL, CG_BASE, OKX_BASE, FNG_URL, MEMPOOL_BASE, STOOQ_BASE,
     CMC_PUBLIC, HTTP_TIMEOUT, USER_AGENT, CBBI_LABELS, MANUAL_CHART_LINES,
-    ETF_ENABLED, ETF_SOURCES, ETF_WALLETPILOT,
+    ETF_ENABLED, ETF_WALLETPILOT, COINGLASS_BASE, COINGLASS_ETF_PATHS, ETF_LINKS,
 )
 
 ROOT = Path(__file__).parent.parent
@@ -606,53 +607,63 @@ def fetch_etf_btc():
     return summ
 
 
-@source("ETF alts (Farside)")
+@source("ETF (CoinGlass)")
 def fetch_etf_flows():
-    """Fluxos de ETF (BTC, ETH, SOL, HYPE) da Farside Investors.
-    A Farside fica atrás do Cloudflare, que bloqueia o IP do GitHub Actions.
-    Tentamos, em cascata: (1) direto, (2) proxy CodeTabs, (3) proxy AllOrigins.
-    Basta um funcionar. Cada ativo é isolado."""
+    """Fluxos de ETF (BTC, ETH, SOL, HYPE) via API oficial do CoinGlass.
+    Requer chave gratuita: crie conta em coinglass.com > API, gere a chave e
+    salve no GitHub como secret COINGLASS_API_KEY.
+    Sem a chave, esta fonte é pulada e o painel usa só o BTC da WalletPilot."""
     if not ETF_ENABLED:
-        raise RuntimeError("ETF desativado em config (ETF_ENABLED=False)")
-    ua = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-          "(KHTML, like Gecko) Chrome/120.0 Safari/537.36")
+        raise RuntimeError("ETF desativado em config")
+    key = os.environ.get("COINGLASS_API_KEY", "").strip()
+    if not key:
+        raise RuntimeError("sem COINGLASS_API_KEY (opcional) — usando só WalletPilot")
 
-    def vias(url):
-        # Ordem de tentativa. Proxies que buscam a página do lado servidor e
-        # devolvem o HTML/texto, contornando o bloqueio do Cloudflare.
-        from urllib.parse import quote
-        yield url, {"User-Agent": ua, "Accept": "text/html"}
-        yield "https://api.codetabs.com/v1/proxy/?quest=" + url, {"User-Agent": ua}
-        yield "https://api.allorigins.win/raw?url=" + quote(url, safe=""), {"User-Agent": ua}
+    headers = {"CG-API-KEY": key, "Accept": "application/json"}
 
-    def buscar(url):
-        ultimo_erro = None
-        for alvo, headers in vias(url):
-            try:
-                r = SESSION.get(alvo, timeout=HTTP_TIMEOUT + 15, headers=headers)
-                r.raise_for_status()
-                daily, hist = _parse_farside(r.text)
-                if daily:
-                    return daily, hist
-                ultimo_erro = "sem linhas"
-            except Exception as exc:  # noqa: BLE001
-                ultimo_erro = type(exc).__name__
-        raise RuntimeError(ultimo_erro or "falhou")
+    def resumo(dados):
+        """dados: lista de {timestamp, flow_usd}. Agrega dia/semana/mês."""
+        pontos = []
+        for d in dados or []:
+            fv = d.get("flow_usd")
+            if fv is None:
+                continue
+            pontos.append((d.get("timestamp") or 0, float(fv) / 1e6))  # -> US$mi
+        if not pontos:
+            return None
+        pontos.sort(key=lambda x: x[0])
+        vals = [v for _, v in pontos]
+        ult_ts = pontos[-1][0]
+        try:
+            data_txt = datetime.fromtimestamp(ult_ts / 1000, timezone.utc).date().isoformat()
+        except Exception:  # noqa: BLE001
+            data_txt = None
+        return {
+            "last_day": round(vals[-1], 1),
+            "last_date": data_txt,
+            "week": round(sum(vals[-5:]), 1),
+            "month": round(sum(vals[-21:]), 1),
+            "cumulative": round(sum(vals), 0),
+            "unit": "US$ mi",
+        }
 
     out = {}
     erros = []
-    for asset, url in ETF_SOURCES.items():
+    for asset, path in COINGLASS_ETF_PATHS.items():
         try:
-            daily, hist = buscar(url)
-            summ = _etf_summary(daily, hist)
+            r = SESSION.get(COINGLASS_BASE + path, timeout=HTTP_TIMEOUT + 10,
+                            headers=headers)
+            r.raise_for_status()
+            js = r.json()
+            summ = resumo(js.get("data"))
             if summ:
                 out[asset] = summ
             else:
                 erros.append(f"{asset}: sem dados")
         except Exception as exc:  # noqa: BLE001
-            erros.append(f"{asset}: {exc}")
+            erros.append(f"{asset}: {type(exc).__name__}")
     if not out:
-        raise RuntimeError("nenhum ETF extraído — " + "; ".join(erros))
+        raise RuntimeError("nenhum ETF via CoinGlass — " + "; ".join(erros))
     return out
 
 
@@ -795,7 +806,6 @@ def main():
     if etf_alts:
         etf.update(etf_alts)
     etf = etf or None
-
     live_price = (market or {}).get("btc", {}).get("price")
     price_series = (cbbi or {}).get("price_series", {})
 
@@ -829,6 +839,7 @@ def main():
         "fear_greed": fng,
         "altseason": altseason,
         "etf": etf,
+        "etf_links": ETF_LINKS,
         "insights": insights,
         "network": net,
         "macro": macro,
