@@ -60,7 +60,7 @@ MANUAL_CHART_LINES = [
 # ---------------------------------------------------------------- mercado americano (FMP)
 # Requer chave gratuita do FMP salva como secret FMP_API_KEY no GitHub.
 # Sem a chave, estas seções são puladas e o resto do painel segue normal.
-FMP_BASE = "https://financialmodelingprep.com/api/v3"
+FMP_BASE = "https://financialmodelingprep.com/stable"
 
 US_STOCKS = [
     "NVDA", "AAPL", "MSFT", "AMZN", "GOOGL", "META", "TSLA", "UNH", "AMD",
