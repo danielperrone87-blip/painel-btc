@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-08-01T02:45:57.383727+00:00",
-  "generated_at_br": "31/07/2026 23:45",
+  "generated_at": "2026-08-01T03:02:21.214102+00:00",
+  "generated_at_br": "01/08/2026 00:02",
   "cbbi": {
     "picycle": {
       "label": "Pi Cycle Top",
@@ -54,17 +54,17 @@
     }
   },
   "models": {
-    "price": 63017,
+    "price": 63012,
     "ath": 124824.4537,
-    "drawdown_from_ath": -49.5155010640355,
+    "drawdown_from_ath": -49.51950668941721,
     "ma200": 71467.1767085,
-    "mayer_multiple": 0.8817614309437948,
+    "mayer_multiple": 0.8816914687565323,
     "ma730": 87437.52303232877,
-    "ma730_multiple": 0.7207088880674304,
+    "ma730_multiple": 0.7206517043798487,
     "ma111": 69644.19082522522,
     "pi_cycle_top_line": 170126.15304114285,
     "pi_cycle_gap_pct": -59.06320716698823,
-    "ytd_pct": -28.942261020878057,
+    "ytd_pct": -28.94789900261149,
     "stoch_rsi": {
       "value": 15.6,
       "k": 15.6,
@@ -82,12 +82,12 @@
   },
   "market": {
     "btc": {
-      "price": 63017,
-      "chg24h": -3.0,
-      "chg7d": -1.9,
-      "chg30d": 5.4,
-      "chg1y": -45.5,
-      "mcap": 1264392856005
+      "price": 63012,
+      "chg24h": -2.3,
+      "chg7d": -1.6,
+      "chg30d": 4.8,
+      "chg1y": -45.3,
+      "mcap": 1264217149721
     },
     "alts": [
       {
@@ -95,105 +95,105 @@
         "name": "Ethereum",
         "note": null,
         "vs_btc_focus": false,
-        "price": 1865.94,
-        "mcap": 225188000814,
-        "chg24h": -2.9,
-        "chg7d": 0.1,
-        "chg30d": 16.4,
-        "chg1y": -49.4,
-        "price_btc": 0.0295884,
-        "chg7d_btc": 0.1,
-        "chg30d_btc": 16.4
+        "price": 1866.56,
+        "mcap": 225241095849,
+        "chg24h": -2.2,
+        "chg7d": 0.4,
+        "chg30d": 15.3,
+        "chg1y": -49.3,
+        "price_btc": 0.02960424,
+        "chg7d_btc": 0.4,
+        "chg30d_btc": 15.3
       },
       {
         "symbol": "BNB",
         "name": "BNB",
         "note": null,
         "vs_btc_focus": false,
-        "price": 589.83,
-        "mcap": 78543495272,
-        "chg24h": -0.3,
-        "chg7d": 4.4,
-        "chg30d": 7.7,
+        "price": 590.62,
+        "mcap": 78600028635,
+        "chg24h": 0.2,
+        "chg7d": 4.6,
+        "chg30d": 7.3,
         "chg1y": -24.9,
-        "price_btc": 0.00935412,
-        "chg7d_btc": 4.4,
-        "chg30d_btc": 7.7
+        "price_btc": 0.00936816,
+        "chg7d_btc": 4.6,
+        "chg30d_btc": 7.3
       },
       {
         "symbol": "SOL",
         "name": "Solana",
         "note": null,
         "vs_btc_focus": false,
-        "price": 72.94,
-        "mcap": 42386477963,
-        "chg24h": -2.3,
-        "chg7d": -1.6,
-        "chg30d": -5.4,
-        "chg1y": -57.1,
-        "price_btc": 0.00115667,
-        "chg7d_btc": -1.6,
-        "chg30d_btc": -5.4
+        "price": 73.02,
+        "mcap": 42423432872,
+        "chg24h": -1.8,
+        "chg7d": -1.5,
+        "chg30d": -6.5,
+        "chg1y": -56.9,
+        "price_btc": 0.00115812,
+        "chg7d_btc": -1.5,
+        "chg30d_btc": -6.5
       },
       {
         "symbol": "HYPE",
         "name": "Hyperliquid",
         "note": null,
         "vs_btc_focus": false,
-        "price": 52.43,
-        "mcap": 11664379510,
-        "chg24h": -5.8,
-        "chg7d": -8.6,
-        "chg30d": -15.6,
-        "chg1y": 27.4,
-        "price_btc": 0.00083142,
-        "chg7d_btc": -8.6,
-        "chg30d_btc": -15.6
+        "price": 52.25,
+        "mcap": 11620091150,
+        "chg24h": -6.0,
+        "chg7d": -9.0,
+        "chg30d": -16.8,
+        "chg1y": 26.9,
+        "price_btc": 0.00082871,
+        "chg7d_btc": -9.0,
+        "chg30d_btc": -16.8
       },
       {
         "symbol": "ZEC",
         "name": "Zcash",
         "note": null,
         "vs_btc_focus": false,
-        "price": 460.17,
-        "mcap": 7728035627,
-        "chg24h": -2.7,
-        "chg7d": -5.9,
-        "chg30d": 11.8,
-        "chg1y": 1142.7,
-        "price_btc": 0.00729798,
-        "chg7d_btc": -5.9,
-        "chg30d_btc": 11.8
+        "price": 460.65,
+        "mcap": 7731910436,
+        "chg24h": -1.1,
+        "chg7d": -5.3,
+        "chg30d": 11.3,
+        "chg1y": 1147.2,
+        "price_btc": 0.00730615,
+        "chg7d_btc": -5.3,
+        "chg30d_btc": 11.3
       },
       {
         "symbol": "AAVE",
         "name": "Aave",
         "note": null,
         "vs_btc_focus": false,
-        "price": 93.07,
-        "mcap": 1434788931,
+        "price": 93.0,
+        "mcap": 1434464797,
         "chg24h": -6.8,
-        "chg7d": 1.3,
-        "chg30d": 10.9,
-        "chg1y": -64.2,
-        "price_btc": 0.00147569,
-        "chg7d_btc": 1.3,
-        "chg30d_btc": 10.9
+        "chg7d": 2.3,
+        "chg30d": 10.5,
+        "chg1y": -64.1,
+        "price_btc": 0.00147499,
+        "chg7d_btc": 2.3,
+        "chg30d_btc": 10.5
       },
       {
         "symbol": "ONDO",
         "name": "Ondo",
         "note": null,
         "vs_btc_focus": false,
-        "price": 0.392486,
-        "mcap": 1911184594,
-        "chg24h": -5.5,
-        "chg7d": 2.2,
-        "chg30d": 21.3,
-        "chg1y": -57.0,
-        "price_btc": 6.23e-06,
-        "chg7d_btc": 2.2,
-        "chg30d_btc": 21.3
+        "price": 0.391534,
+        "mcap": 1906171980,
+        "chg24h": -4.6,
+        "chg7d": 3.3,
+        "chg30d": 17.2,
+        "chg1y": -57.1,
+        "price_btc": 6.21e-06,
+        "chg7d_btc": 3.3,
+        "chg30d_btc": 17.2
       },
       {
         "symbol": "MORPHO",
@@ -201,74 +201,74 @@
         "note": null,
         "vs_btc_focus": false,
         "price": 2.0,
-        "mcap": 1309213395,
-        "chg24h": -0.8,
-        "chg7d": 3.9,
-        "chg30d": -4.2,
-        "chg1y": 15.8,
-        "price_btc": 3.166e-05,
-        "chg7d_btc": 3.9,
-        "chg30d_btc": -4.2
+        "mcap": 1308245850,
+        "chg24h": -0.2,
+        "chg7d": 3.8,
+        "chg30d": -6.9,
+        "chg1y": 15.9,
+        "price_btc": 3.167e-05,
+        "chg7d_btc": 3.8,
+        "chg30d_btc": -6.9
       },
       {
         "symbol": "AERO",
         "name": "Aerodrome",
         "note": null,
         "vs_btc_focus": false,
-        "price": 0.41955,
-        "mcap": 410717753,
-        "chg24h": -3.3,
-        "chg7d": -0.4,
-        "chg30d": -10.3,
-        "chg1y": -46.5,
+        "price": 0.419935,
+        "mcap": 411085841,
+        "chg24h": -1.7,
+        "chg7d": 1.1,
+        "chg30d": -10.6,
+        "chg1y": -47.1,
         "price_btc": 6.67e-06,
-        "chg7d_btc": -0.4,
-        "chg30d_btc": -10.3
+        "chg7d_btc": 1.1,
+        "chg30d_btc": -10.6
       },
       {
         "symbol": "CFG",
         "name": "Centrifuge",
         "note": null,
         "vs_btc_focus": false,
-        "price": 0.177902,
+        "price": 0.178132,
         "mcap": 0.0,
-        "chg24h": -3.7,
-        "chg7d": 1.5,
-        "chg30d": -7.7,
-        "chg1y": -32.9,
-        "price_btc": 2.82e-06,
-        "chg7d_btc": 1.5,
-        "chg30d_btc": -7.7
+        "chg24h": -0.7,
+        "chg7d": 3.8,
+        "chg30d": -8.5,
+        "chg1y": -30.4,
+        "price_btc": 2.83e-06,
+        "chg7d_btc": 3.8,
+        "chg30d_btc": -8.5
       },
       {
         "symbol": "EVA",
         "name": "EverValue Coin",
         "note": "Lastreado em WBTC com burn vault — a leitura relevante é EVA/BTC.",
         "vs_btc_focus": true,
-        "price": 33.35,
+        "price": 33.37,
         "mcap": 0.0,
         "chg24h": -2.3,
-        "chg7d": -2.1,
-        "chg30d": 8.2,
-        "chg1y": 514.3,
-        "price_btc": 0.00053134,
-        "chg7d_btc": -2.1,
-        "chg30d_btc": 8.2
+        "chg7d": -1.7,
+        "chg30d": 8.0,
+        "chg1y": 488.3,
+        "price_btc": 0.00053162,
+        "chg7d_btc": -1.7,
+        "chg30d_btc": 8.0
       }
     ],
     "dominance": {
-      "btc": 56.231993044218484,
-      "eth": 10.016038505559036
+      "btc": 56.22228790829672,
+      "eth": 10.019329071241021
     },
-    "total_mcap": 2248120287776.0776,
-    "total_mcap_chg24h": -1.387042793256124
+    "total_mcap": 2248184682629.932,
+    "total_mcap_chg24h": -1.4176368245522328
   },
   "derivatives": {
-    "funding_rate_pct": 0.00699985427321,
+    "funding_rate_pct": 0.00669594238922,
     "next_funding": "1785600000000",
-    "open_interest_btc": 31909.627000000146,
-    "open_interest_usd": 2011544594.5276093,
-    "mark_price": 63040.1
+    "open_interest_btc": 31908.566500000146,
+    "open_interest_usd": 2011254381.9147093,
+    "mark_price": 63032.0
   },
   "fear_greed": {
     "value": 27,
@@ -295,8 +295,326 @@
     "SoSoValue": "https://sosovalue.com/pt/assets/etf/us-btc-spot",
     "Farside": "https://farside.co.uk/btc/"
   },
-  "us_stocks": null,
-  "us_etfs": null,
+  "us_stocks": [
+    {
+      "symbol": "NVDA",
+      "name": "NVIDIA Corporation",
+      "price": 200.75,
+      "chg_pct": null,
+      "sector": "Technology",
+      "rsi": null,
+      "rsi_zone": null
+    },
+    {
+      "symbol": "AAPL",
+      "name": "Apple Inc.",
+      "price": 308.91,
+      "chg_pct": null,
+      "sector": "Technology",
+      "rsi": null,
+      "rsi_zone": null
+    },
+    {
+      "symbol": "MSFT",
+      "name": "Microsoft Corporation",
+      "price": 464.72,
+      "chg_pct": null,
+      "sector": "Technology",
+      "rsi": null,
+      "rsi_zone": null
+    },
+    {
+      "symbol": "AMZN",
+      "name": "Amazon.com, Inc.",
+      "price": 271.58,
+      "chg_pct": null,
+      "sector": "Consumer Cyclical",
+      "rsi": null,
+      "rsi_zone": null
+    },
+    {
+      "symbol": "GOOGL",
+      "name": "Alphabet Inc.",
+      "price": 356.13,
+      "chg_pct": null,
+      "sector": "Communication Services",
+      "rsi": null,
+      "rsi_zone": null
+    },
+    {
+      "symbol": "META",
+      "name": "Meta Platforms, Inc.",
+      "price": 556.71,
+      "chg_pct": null,
+      "sector": "Communication Services",
+      "rsi": null,
+      "rsi_zone": null
+    },
+    {
+      "symbol": "TSLA",
+      "name": "Tesla, Inc.",
+      "price": 311.21,
+      "chg_pct": null,
+      "sector": "Consumer Cyclical",
+      "rsi": null,
+      "rsi_zone": null
+    },
+    {
+      "symbol": "UNH",
+      "name": "UnitedHealth Group Incorporated",
+      "price": 414.4,
+      "chg_pct": null,
+      "sector": "Healthcare",
+      "rsi": null,
+      "rsi_zone": null
+    },
+    {
+      "symbol": "AMD",
+      "name": "Advanced Micro Devices, Inc.",
+      "price": 476.15,
+      "chg_pct": null,
+      "sector": "Technology",
+      "rsi": null,
+      "rsi_zone": null
+    },
+    {
+      "symbol": "WMT",
+      "name": "Walmart Inc.",
+      "price": 111.2,
+      "chg_pct": null,
+      "sector": "Consumer Defensive",
+      "rsi": null,
+      "rsi_zone": null
+    },
+    {
+      "symbol": "MSTR",
+      "name": null,
+      "price": null,
+      "chg_pct": null,
+      "sector": "Technology",
+      "rsi": null,
+      "rsi_zone": null
+    },
+    {
+      "symbol": "BMNR",
+      "name": null,
+      "price": null,
+      "chg_pct": null,
+      "sector": "Financial Services",
+      "rsi": null,
+      "rsi_zone": null
+    },
+    {
+      "symbol": "COIN",
+      "name": "Coinbase Global, Inc.",
+      "price": 146.26,
+      "chg_pct": null,
+      "sector": "Financial Services",
+      "rsi": null,
+      "rsi_zone": null
+    },
+    {
+      "symbol": "CRCL",
+      "name": null,
+      "price": null,
+      "chg_pct": null,
+      "sector": "Financial Services",
+      "rsi": null,
+      "rsi_zone": null
+    },
+    {
+      "symbol": "LMT",
+      "name": "Lockheed Martin Corporation",
+      "price": 582.74,
+      "chg_pct": null,
+      "sector": "Industrials",
+      "rsi": null,
+      "rsi_zone": null
+    },
+    {
+      "symbol": "RHM.DE",
+      "name": null,
+      "price": null,
+      "chg_pct": null,
+      "sector": "Industrials",
+      "rsi": null,
+      "rsi_zone": null
+    },
+    {
+      "symbol": "PLTR",
+      "name": "Palantir Technologies Inc.",
+      "price": 123.06,
+      "chg_pct": null,
+      "sector": "Technology",
+      "rsi": null,
+      "rsi_zone": null
+    },
+    {
+      "symbol": "AVAV",
+      "name": null,
+      "price": null,
+      "chg_pct": null,
+      "sector": "Industrials",
+      "rsi": null,
+      "rsi_zone": null
+    }
+  ],
+  "us_etfs": [
+    {
+      "symbol": "XLK",
+      "label": "Tecnologia",
+      "price": null,
+      "chg_pct": null,
+      "rsi": null,
+      "rsi_zone": null,
+      "kind": "etf"
+    },
+    {
+      "symbol": "XLE",
+      "label": "Energia",
+      "price": null,
+      "chg_pct": null,
+      "rsi": null,
+      "rsi_zone": null,
+      "kind": "etf"
+    },
+    {
+      "symbol": "XLI",
+      "label": "Industrial",
+      "price": null,
+      "chg_pct": null,
+      "rsi": null,
+      "rsi_zone": null,
+      "kind": "etf"
+    },
+    {
+      "symbol": "XLB",
+      "label": "Materiais",
+      "price": null,
+      "chg_pct": null,
+      "rsi": null,
+      "rsi_zone": null,
+      "kind": "etf"
+    },
+    {
+      "symbol": "QQQ",
+      "label": "Nasdaq 100",
+      "price": null,
+      "chg_pct": null,
+      "rsi": null,
+      "rsi_zone": null,
+      "kind": "etf"
+    },
+    {
+      "symbol": "SMH",
+      "label": "Semicondutores",
+      "price": null,
+      "chg_pct": null,
+      "rsi": null,
+      "rsi_zone": null,
+      "kind": "etf"
+    },
+    {
+      "symbol": "AIQ",
+      "label": "Inteligência Artificial",
+      "price": null,
+      "chg_pct": null,
+      "rsi": null,
+      "rsi_zone": null,
+      "kind": "etf"
+    },
+    {
+      "symbol": "BOTZ",
+      "label": "Robótica/IA",
+      "price": null,
+      "chg_pct": null,
+      "rsi": null,
+      "rsi_zone": null,
+      "kind": "etf"
+    },
+    {
+      "symbol": "SHLD",
+      "label": "Defesa/Ciber",
+      "price": null,
+      "chg_pct": null,
+      "rsi": null,
+      "rsi_zone": null,
+      "kind": "etf"
+    },
+    {
+      "symbol": "ITA",
+      "label": "Aeroespacial/Defesa",
+      "price": null,
+      "chg_pct": null,
+      "rsi": null,
+      "rsi_zone": null,
+      "kind": "etf"
+    },
+    {
+      "symbol": "XAR",
+      "label": "Aeroespacial/Defesa",
+      "price": null,
+      "chg_pct": null,
+      "rsi": null,
+      "rsi_zone": null,
+      "kind": "etf"
+    },
+    {
+      "symbol": "URNM",
+      "label": "Urânio/Nuclear",
+      "price": null,
+      "chg_pct": null,
+      "rsi": null,
+      "rsi_zone": null,
+      "kind": "etf"
+    },
+    {
+      "symbol": "NLR",
+      "label": "Nuclear",
+      "price": null,
+      "chg_pct": null,
+      "rsi": null,
+      "rsi_zone": null,
+      "kind": "etf"
+    },
+    {
+      "symbol": "HACK",
+      "label": "Cibersegurança",
+      "price": null,
+      "chg_pct": null,
+      "rsi": null,
+      "rsi_zone": null,
+      "kind": "etf"
+    },
+    {
+      "symbol": "Ouro",
+      "label": "Metal",
+      "price": 4107,
+      "chg_pct": null,
+      "rsi": null,
+      "rsi_zone": null,
+      "kind": "commodity"
+    },
+    {
+      "symbol": "Prata",
+      "label": "Metal",
+      "price": 57.786,
+      "chg_pct": null,
+      "rsi": null,
+      "rsi_zone": null,
+      "kind": "commodity"
+    },
+    {
+      "symbol": "Cobre",
+      "label": "Metal",
+      "price": null,
+      "chg_pct": null,
+      "rsi": null,
+      "rsi_zone": null,
+      "kind": "commodity"
+    }
+  ],
+  "us_market_ts": "2026-08-01T03:02:21.214102+00:00",
   "onchain_links": [
     {
       "label": "STH-SOPR (curto prazo)",
@@ -344,9 +662,9 @@
     "block_height": 960497,
     "hashrate": 898641679942722500000,
     "difficulty": 126231507121868.2,
-    "difficulty_change_pct": -0.6182252503323937,
+    "difficulty_change_pct": -0.8017215362611796,
     "blocks_to_retarget": 1135,
-    "fee_fast": 4,
+    "fee_fast": 5,
     "fee_economy": 2
   },
   "macro": null,
@@ -388,12 +706,12 @@
       "detail": "RuntimeError: sem COINGLASS_API_KEY (opcional) — usando só WalletPilot"
     },
     "Ações EUA (FMP)": {
-      "ok": false,
-      "detail": "HTTPError: 403 Client Error: Forbidden for url: https://financialmodelingprep.com/api/v3/quote/NVDA,AAPL,MSFT,AMZN,GOOGL,META,TSLA,UNH,AMD,WMT,MSTR,BMNR,COIN,CRCL,LMT,RHM.DE,PLTR,AVAV?apikey=qB6sm6jRT3czao2R8oBCygv6FP75CUyL"
+      "ok": true,
+      "detail": "ok"
     },
     "ETFs EUA (FMP)": {
-      "ok": false,
-      "detail": "HTTPError: 403 Client Error: Forbidden for url: https://financialmodelingprep.com/api/v3/quote/XLK,XLE,XLI,XLB,QQQ,SMH,AIQ,BOTZ,SHLD,ITA,XAR,URNM,NLR,HACK,GCUSD,SIUSD,HGUSD?apikey=qB6sm6jRT3czao2R8oBCygv6FP75CUyL"
+      "ok": true,
+      "detail": "ok"
     }
   }
 }
