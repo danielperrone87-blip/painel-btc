@@ -729,7 +729,7 @@ function drawChart(c){
 
   // Para períodos curtos (até ~1 ano) usamos a série DIÁRIA (mais detalhe).
   // Para longos (2 anos+ e "tudo") usamos a semanal (mais leve e abrangente).
-  const usaDiario = chartRangeDays>0 && chartRangeDays<=400 && diario.length>10;
+  const usaDiario = chartRangeDays>0 && chartRangeDays<=460 && diario.length>10;
   const base = usaDiario ? diario : semanal;
 
   let pts=base;
@@ -760,11 +760,11 @@ function drawChart(c){
     borderWidth:width, pointRadius:0, tension:.1, spanGaps:true,
   });
 
-  // Séries diferentes para curto (diário: SMA 50/200 dias) e longo (semanal).
+  // Séries diferentes para curto (diário: SMA 200/300 dias) e longo (semanal).
   const datasets = usaDiario ? [
     mkLine("price","Preço BTC",1.8),
-    mkLine("sma50","SMA 50 dias",1.3,CHART_COLORS.sma200w),
-    mkLine("sma200","SMA 200 dias",1.3,CHART_COLORS.sma300w),
+    mkLine("sma200","SMA 200 dias",1.3,CHART_COLORS.sma200w),
+    mkLine("sma300","SMA 300 dias",1.3,CHART_COLORS.sma300w),
   ] : [
     mkLine("price","Preço BTC",1.8),
     mkLine("sma200w","SMA 200s",1.3),
