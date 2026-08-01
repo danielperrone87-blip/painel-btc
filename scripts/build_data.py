@@ -28,6 +28,7 @@ from config import (  # noqa: E402
     CBBI_URL, CG_BASE, OKX_BASE, FNG_URL, MEMPOOL_BASE, STOOQ_BASE,
     CMC_PUBLIC, HTTP_TIMEOUT, USER_AGENT, CBBI_LABELS, MANUAL_CHART_LINES,
     ETF_ENABLED, ETF_WALLETPILOT, COINGLASS_BASE, COINGLASS_ETF_PATHS, ETF_LINKS,
+    FMP_BASE, US_STOCKS, US_ETFS, US_COMMODITIES, ETF_LABELS, CHECKONCHAIN_LINKS,
 )
 
 ROOT = Path(__file__).parent.parent
@@ -715,6 +716,100 @@ def fetch_etf_flows():
     return out
 
 
+# ------------------------------------------------------- mercado americano
+
+def _fmp_rsi_zone(rsi):
+    if rsi is None:
+        return None
+    if rsi >= 70:
+        return "sobrecomprado"
+    if rsi <= 30:
+        return "sobrevendido"
+    return "neutro"
+
+
+def _fmp_quotes(symbols, key):
+    """Cotação em lote (1 requisição p/ vários tickers) — economiza quota."""
+    data = get_json(f"{FMP_BASE}/quote/{','.join(symbols)}", params={"apikey": key})
+    return {d.get("symbol"): d for d in (data or [])}
+
+
+def _fmp_rsi(symbol, key):
+    """RSI diário (14). 1 requisição por símbolo."""
+    try:
+        data = get_json(f"{FMP_BASE}/technical_indicator/1day/{symbol}",
+                        params={"period": 14, "type": "rsi", "apikey": key})
+        if data and isinstance(data, list):
+            v = data[0].get("rsi")
+            return round(float(v), 1) if v is not None else None
+    except Exception:  # noqa: BLE001
+        pass
+    return None
+
+
+@source("Ações EUA (FMP)")
+def fetch_us_stocks():
+    """Ações americanas: preço, variação, RSI e setor via FMP."""
+    key = os.environ.get("FMP_API_KEY", "").strip()
+    if not key:
+        raise RuntimeError("sem FMP_API_KEY (opcional)")
+
+    quotes = _fmp_quotes(US_STOCKS, key)
+    setores = {}
+    try:
+        prof = get_json(f"{FMP_BASE}/profile/{','.join(US_STOCKS)}",
+                        params={"apikey": key})
+        for p in (prof or []):
+            setores[p.get("symbol")] = p.get("sector")
+    except Exception:  # noqa: BLE001
+        pass
+
+    out = []
+    for sym in US_STOCKS:
+        q = quotes.get(sym) or {}
+        rsi = _fmp_rsi(sym, key)
+        out.append({
+            "symbol": sym, "name": q.get("name"),
+            "price": q.get("price"),
+            "chg_pct": q.get("changesPercentage"),
+            "sector": setores.get(sym),
+            "rsi": rsi, "rsi_zone": _fmp_rsi_zone(rsi),
+        })
+    if not any(x["price"] is not None for x in out):
+        raise RuntimeError("FMP não retornou cotações de ações")
+    return out
+
+
+@source("ETFs EUA (FMP)")
+def fetch_us_etfs():
+    """ETFs setoriais + commodities (ouro/prata/cobre) via FMP."""
+    key = os.environ.get("FMP_API_KEY", "").strip()
+    if not key:
+        raise RuntimeError("sem FMP_API_KEY (opcional)")
+
+    quotes = _fmp_quotes(US_ETFS + list(US_COMMODITIES), key)
+    out = []
+    for sym in US_ETFS:
+        q = quotes.get(sym) or {}
+        rsi = _fmp_rsi(sym, key)
+        out.append({
+            "symbol": sym, "label": ETF_LABELS.get(sym, ""),
+            "price": q.get("price"), "chg_pct": q.get("changesPercentage"),
+            "rsi": rsi, "rsi_zone": _fmp_rsi_zone(rsi), "kind": "etf",
+        })
+    for sym, label in US_COMMODITIES.items():
+        q = quotes.get(sym) or {}
+        rsi = _fmp_rsi(sym, key)
+        out.append({
+            "symbol": label, "label": "Metal",
+            "price": q.get("price"), "chg_pct": q.get("changesPercentage"),
+            "rsi": rsi, "rsi_zone": _fmp_rsi_zone(rsi), "kind": "commodity",
+        })
+    if not any(x["price"] is not None for x in out):
+        raise RuntimeError("FMP não retornou cotações de ETFs")
+    return out
+
+
 # ------------------------------------------------------------- insights
 
 def build_insights(cbbi, models, derivs, fng, market, altseason):
@@ -854,6 +949,8 @@ def main():
     if etf_alts:
         etf.update(etf_alts)
     etf = etf or None
+    us_stocks = fetch_us_stocks()
+    us_etfs = fetch_us_etfs()
     live_price = (market or {}).get("btc", {}).get("price")
     price_series = (cbbi or {}).get("price_series", {})
 
@@ -888,6 +985,9 @@ def main():
         "altseason": altseason,
         "etf": etf,
         "etf_links": ETF_LINKS,
+        "us_stocks": us_stocks,
+        "us_etfs": us_etfs,
+        "onchain_links": CHECKONCHAIN_LINKS,
         "insights": insights,
         "network": net,
         "macro": macro,
