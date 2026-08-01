@@ -57,6 +57,49 @@ MANUAL_CHART_LINES = [
     {"key": "lth",      "label": "LTH Realized Price",          "value": None},
 ]
 
+# ---------------------------------------------------------------- mercado americano (FMP)
+# Requer chave gratuita do FMP salva como secret FMP_API_KEY no GitHub.
+# Sem a chave, estas seções são puladas e o resto do painel segue normal.
+FMP_BASE = "https://financialmodelingprep.com/api/v3"
+
+US_STOCKS = [
+    "NVDA", "AAPL", "MSFT", "AMZN", "GOOGL", "META", "TSLA", "UNH", "AMD",
+    "WMT", "MSTR", "BMNR", "COIN", "CRCL", "LMT", "RHM.DE", "PLTR", "AVAV",
+]
+US_ETFS = [
+    "XLK", "XLE", "XLI", "XLB", "QQQ", "SMH", "AIQ", "BOTZ", "SHLD",
+    "ITA", "XAR", "URNM", "NLR", "HACK",
+]
+US_COMMODITIES = {
+    "GCUSD": "Ouro",
+    "SIUSD": "Prata",
+    "HGUSD": "Cobre",
+}
+ETF_LABELS = {
+    "XLK": "Tecnologia", "XLE": "Energia", "XLI": "Industrial",
+    "XLB": "Materiais", "QQQ": "Nasdaq 100", "SMH": "Semicondutores",
+    "AIQ": "Inteligência Artificial", "BOTZ": "Robótica/IA",
+    "SHLD": "Defesa/Ciber", "ITA": "Aeroespacial/Defesa",
+    "XAR": "Aeroespacial/Defesa", "URNM": "Urânio/Nuclear",
+    "NLR": "Nuclear", "HACK": "Cibersegurança",
+}
+
+# ---------------------------------------------------------------- on-chain avançado (links)
+# Métricas on-chain do Checkonchain: não há API gratuita, então mostramos
+# links diretos para os gráficos (a fonte atualiza sozinha).
+CHECKONCHAIN_LINKS = [
+    {"label": "STH-SOPR (curto prazo)",
+     "url": "https://charts.checkonchain.com/btconchain/realised/sthsopr_indicator/sthsopr_indicator_light.html"},
+    {"label": "STH-MVRV (curto prazo)",
+     "url": "https://charts.checkonchain.com/btconchain/unrealised/sthmvrv_indicator/sthmvrv_indicator_light.html"},
+    {"label": "LTH Net Position Change",
+     "url": "https://charts.checkonchain.com/btconchain/supply/lthnetposchange_0/lthnetposchange_0_light.html"},
+    {"label": "LTH-SOPR (longo prazo)",
+     "url": "https://charts.checkonchain.com/btconchain/realised/lthsopr_indicator/lthsopr_indicator_light.html"},
+    {"label": "LTH-MVRV (longo prazo)",
+     "url": "https://charts.checkonchain.com/btconchain/unrealised/mvrv_lth/mvrv_lth_light.html"},
+]
+
 # ---------------------------------------------------------------- endpoints
 CBBI_URL       = "https://colintalkscrypto.com/cbbi/data/latest.json"
 CG_BASE        = "https://api.coingecko.com/api/v3"
