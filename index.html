@@ -609,7 +609,7 @@ const CHART_COLORS = {
 let btcChartInstance = null;
 let rsiChartInstance = null;
 let chartLogScale = true;
-let chartRangeYears = 2;   // intervalo visível: 2, 4 ou 0 (tudo)
+let chartRangeDays = 730;   // período visível em dias (0 = tudo)
 
 function loadChart(attempt){
   attempt = attempt || 0;
@@ -724,18 +724,22 @@ function drawChart(c){
   const canvas=document.getElementById("btcChart");
   if(!canvas || !window.Chart) return;
 
-  const allPts=c.points||[];
-  // Recorta o intervalo visível (últimos N anos), mantendo o histórico completo
-  // guardado em allPts para quando o usuário quiser ver "tudo".
-  let pts=allPts;
-  if(chartRangeYears>0 && allPts.length){
-    const ultimo=allPts[allPts.length-1].t;
-    const corte=ultimo - chartRangeYears*365*24*60*60*1000;
-    const filtrado=allPts.filter(p=>p.t>=corte);
-    if(filtrado.length>5) pts=filtrado;   // só aplica se sobrar dado suficiente
+  const semanal=c.points||[];
+  const diario=c.points_daily||[];
+
+  // Para períodos curtos (até ~1 ano) usamos a série DIÁRIA (mais detalhe).
+  // Para longos (2 anos+ e "tudo") usamos a semanal (mais leve e abrangente).
+  const usaDiario = chartRangeDays>0 && chartRangeDays<=400 && diario.length>10;
+  const base = usaDiario ? diario : semanal;
+
+  let pts=base;
+  if(chartRangeDays>0 && base.length){
+    const ultimo=base[base.length-1].t;
+    const corte=ultimo - chartRangeDays*24*60*60*1000;
+    const filtrado=base.filter(p=>p.t>=corte);
+    if(filtrado.length>3) pts=filtrado;
   }
-  // Rótulos como texto (dd/mm/aaaa) em vez de timestamps — assim não
-  // dependemos do adaptador de datas do Chart.js, que é uma peça frágil.
+  // Rótulos como texto (dd/mm/aaaa) — sem depender do adaptador de datas.
   const labels=pts.map(p=>{
     const d=new Date(p.t);
     return d.toLocaleDateString("pt-BR");
@@ -750,13 +754,18 @@ function drawChart(c){
     if(l.value!=null) levels.push({label:l.label, value:l.value, color:CHART_COLORS[l.key]||"#999", dash:true});
   });
 
-  const mkLine=(key,label,width)=>({
+  const mkLine=(key,label,width,color)=>({
     label, data:pts.map(p=>p[key]),
-    borderColor:CHART_COLORS[key], backgroundColor:CHART_COLORS[key],
+    borderColor:color||CHART_COLORS[key], backgroundColor:color||CHART_COLORS[key],
     borderWidth:width, pointRadius:0, tension:.1, spanGaps:true,
   });
 
-  const datasets=[
+  // Séries diferentes para curto (diário: SMA 50/200 dias) e longo (semanal).
+  const datasets = usaDiario ? [
+    mkLine("price","Preço BTC",1.8),
+    mkLine("sma50","SMA 50 dias",1.3,CHART_COLORS.sma200w),
+    mkLine("sma200","SMA 200 dias",1.3,CHART_COLORS.sma300w),
+  ] : [
     mkLine("price","Preço BTC",1.8),
     mkLine("sma200w","SMA 200s",1.3),
     mkLine("sma300w","SMA 300s",1.3),
@@ -803,8 +812,13 @@ function drawChart(c){
                const lab=this.getLabelForValue(val);
                const partes=(lab||"").split("/");  // [dd, mm, aaaa]
                if(partes.length<3) return lab;
-               // intervalo curto (2-4 anos): mostra mês/ano; longo: só o ano
-               if(chartRangeYears>0 && chartRangeYears<=4){
+               // curto (<=90d): dia/mês ; médio (<=1a): mês/ano ; longo: ano
+               if(chartRangeDays>0 && chartRangeDays<=90){
+                 const antLab=idx>0?(this.getLabelForValue(idx-1)||"").split("/"):null;
+                 const mudouDia=!antLab||partes[0]!==antLab[0];
+                 return mudouDia?(partes[0]+"/"+partes[1]):"";
+               }
+               if(chartRangeDays>0 && chartRangeDays<=730){
                  const antLab=idx>0?(this.getLabelForValue(idx-1)||"").split("/"):null;
                  const mudouMes=!antLab||partes[1]!==antLab[1]||partes[2]!==antLab[2];
                  return mudouMes?(partes[1]+"/"+partes[2].slice(2)):"";
@@ -852,19 +866,21 @@ function drawChart(c){
     `<span style="color:${i.color}"><i class="${i.dash?'dash':''}" style="background:${i.dash?'':i.color};color:${i.color}"></i>
      <span style="color:var(--muted)">${i.label}</span></span>`).join("");
 
-  // Toolbar: escala (log/linear) + intervalo (2a/4a/tudo)
+  // Toolbar: escala (log/linear) + períodos
   const mkBtn=(id,txt,on)=>`<button id="${id}" class="${on?'on':''}">${txt}</button>`;
+  const periodos=[
+    ["p7","7d",7],["p30","30d",30],["p60","60d",60],["p365","1a",365],
+    ["p730","2a",730],["p1460","4a",1460],["pall","Tudo",0],
+  ];
   document.getElementById("chartToolbar").innerHTML=
     mkBtn("btnLog","Log",chartLogScale)+mkBtn("btnLin","Linear",!chartLogScale)+
     '<span style="width:10px"></span>'+
-    mkBtn("btnR2","2 anos",chartRangeYears===2)+
-    mkBtn("btnR4","4 anos",chartRangeYears===4)+
-    mkBtn("btnRall","Tudo",chartRangeYears===0);
+    periodos.map(([id,txt,d])=>mkBtn(id,txt,chartRangeDays===d)).join("");
   document.getElementById("btnLog").onclick=()=>{chartLogScale=true;drawChart(c);};
   document.getElementById("btnLin").onclick=()=>{chartLogScale=false;drawChart(c);};
-  document.getElementById("btnR2").onclick=()=>{chartRangeYears=2;drawChart(c);};
-  document.getElementById("btnR4").onclick=()=>{chartRangeYears=4;drawChart(c);};
-  document.getElementById("btnRall").onclick=()=>{chartRangeYears=0;drawChart(c);};
+  periodos.forEach(([id,txt,d])=>{
+    document.getElementById(id).onclick=()=>{chartRangeDays=d;drawChart(c);};
+  });
 
   // Nota sobre linhas manuais ausentes
   const faltando=(c.manual_levels||[]).filter(l=>l.value==null).map(l=>l.label);
