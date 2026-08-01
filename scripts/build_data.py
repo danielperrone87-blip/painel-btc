@@ -299,12 +299,34 @@ def build_chart_series(price_series, cbbi_metrics, manual_lines):
     if proxy_realized:
         mvrv080 = round(proxy_realized * 0.80, 2)
 
+    # --- Série DIÁRIA para períodos curtos (7d, 30d, 60d, 1 ano).
+    # A série semanal acima fica ruim em janelas curtas (poucos pontos), então
+    # guardamos também os últimos ~400 dias em resolução diária. Inclui SMA de
+    # 50 e 200 dias, referências úteis no curto/médio prazo.
+    daily = []
+    n = len(items)
+    inicio = max(0, n - 400)
+    for i in range(inicio, n):
+        ts, px = items[i]
+
+        def sma_d(days):
+            if i + 1 < days:
+                return None
+            jan = ordered[i + 1 - days: i + 1]
+            return round(sum(jan) / len(jan), 2)
+
+        daily.append({
+            "t": ts * 1000, "price": round(px, 2),
+            "sma50": sma_d(50), "sma200": sma_d(200),
+        })
+
     return {
         "points": points,
+        "points_daily": daily,
         "auto_levels": {
             "mvrv080": {"label": "MVRV 0,80 (aprox.)", "value": mvrv080},
         },
-        "manual_levels": manual_lines,   # vem do config, Daniel edita
+        "manual_levels": manual_lines,
         "last_price": round(px_last, 2),
     }
 
@@ -728,20 +750,32 @@ def _fmp_rsi_zone(rsi):
     return "neutro"
 
 
-def _fmp_quotes(symbols, key):
-    """Cotação via endpoint stable. Tenta em lote (symbol=A,B,C); se a conta
-    gratuita não aceitar lote, cai para um símbolo por vez."""
-    out = {}
+def _fmp_pct(d):
+    """Extrai a variação % do dia de um quote, tolerante a nomes de campo
+    diferentes entre endpoints do FMP; se não vier, calcula de price/previousClose."""
+    for k in ("changePercentage", "changesPercentage", "changePercent"):
+        v = d.get(k)
+        if v is not None:
+            try:
+                return float(v)
+            except (TypeError, ValueError):
+                pass
+    # fallback: calcula do preço atual vs fechamento anterior
+    price = d.get("price")
+    prev = d.get("previousClose")
     try:
-        data = get_json(f"{FMP_BASE}/quote",
-                        params={"symbol": ",".join(symbols), "apikey": key})
-        for d in (data or []):
-            out[d.get("symbol")] = d
-    except Exception:  # noqa: BLE001
+        if price is not None and prev not in (None, 0):
+            return (float(price) / float(prev) - 1) * 100
+    except (TypeError, ValueError):
         pass
-    # completa os que faltaram (ou tudo, se o lote falhou) um a um
-    faltantes = [s for s in symbols if s not in out]
-    for s in faltantes:
+    return None
+
+
+def _fmp_quotes(symbols, key):
+    """Cotação via endpoint stable, um símbolo por vez (o /stable/quote é
+    confiável assim). Cada quote já traz price e a variação."""
+    out = {}
+    for s in symbols:
         try:
             d = get_json(f"{FMP_BASE}/quote", params={"symbol": s, "apikey": key})
             if d and isinstance(d, list):
@@ -795,7 +829,7 @@ def fetch_us_stocks(setores_cache=None):
         out.append({
             "symbol": sym, "name": q.get("name"),
             "price": q.get("price"),
-            "chg_pct": q.get("changesPercentage"),
+            "chg_pct": _fmp_pct(q),
             "sector": setores.get(sym),
             "rsi": rsi, "rsi_zone": _fmp_rsi_zone(rsi),
         })
@@ -818,7 +852,7 @@ def fetch_us_etfs():
         rsi = _fmp_rsi(sym, key)
         out.append({
             "symbol": sym, "label": ETF_LABELS.get(sym, ""),
-            "price": q.get("price"), "chg_pct": q.get("changesPercentage"),
+            "price": q.get("price"), "chg_pct": _fmp_pct(q),
             "rsi": rsi, "rsi_zone": _fmp_rsi_zone(rsi), "kind": "etf",
         })
     for sym, label in US_COMMODITIES.items():
@@ -826,7 +860,7 @@ def fetch_us_etfs():
         rsi = _fmp_rsi(sym, key)
         out.append({
             "symbol": label, "label": "Metal",
-            "price": q.get("price"), "chg_pct": q.get("changesPercentage"),
+            "price": q.get("price"), "chg_pct": _fmp_pct(q),
             "rsi": rsi, "rsi_zone": _fmp_rsi_zone(rsi), "kind": "commodity",
         })
     if not any(x["price"] is not None for x in out):
