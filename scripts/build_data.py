@@ -300,12 +300,10 @@ def build_chart_series(price_series, cbbi_metrics, manual_lines):
         mvrv080 = round(proxy_realized * 0.80, 2)
 
     # --- Série DIÁRIA para períodos curtos (7d, 30d, 60d, 1 ano).
-    # A série semanal acima fica ruim em janelas curtas (poucos pontos), então
-    # guardamos também os últimos ~400 dias em resolução diária. Inclui SMA de
-    # 50 e 200 dias, referências úteis no curto/médio prazo.
+    # Guardamos ~450 dias em resolução diária, com SMA 200 e 300 dias e RSI 14.
     daily = []
     n = len(items)
-    inicio = max(0, n - 400)
+    inicio = max(0, n - 460)
     for i in range(inicio, n):
         ts, px = items[i]
 
@@ -317,8 +315,20 @@ def build_chart_series(price_series, cbbi_metrics, manual_lines):
 
         daily.append({
             "t": ts * 1000, "price": round(px, 2),
-            "sma50": sma_d(50), "sma200": sma_d(200),
+            "sma200": sma_d(200), "sma300": sma_d(300),
         })
+
+    # RSI diário (14) para o painel do gráfico nos períodos curtos
+    closes_d = [p["price"] for p in daily]
+    rsis_d = _rsi(closes_d, 14)
+    if rsis_d:
+        off = len(daily) - len(rsis_d)
+        for k, val in enumerate(rsis_d):
+            idx = k + off
+            if 0 <= idx < len(daily):
+                daily[idx]["rsi"] = round(val, 1)
+                if k >= 13:
+                    daily[idx]["rsi_sma"] = round(sum(rsis_d[k-13:k+1]) / 14, 1)
 
     return {
         "points": points,
@@ -750,52 +760,74 @@ def _fmp_rsi_zone(rsi):
     return "neutro"
 
 
-def _fmp_pct(d):
-    """Extrai a variação % do dia de um quote, tolerante a nomes de campo
-    diferentes entre endpoints do FMP; se não vier, calcula de price/previousClose."""
-    for k in ("changePercentage", "changesPercentage", "changePercent"):
-        v = d.get(k)
-        if v is not None:
-            try:
-                return float(v)
-            except (TypeError, ValueError):
-                pass
-    # fallback: calcula do preço atual vs fechamento anterior
-    price = d.get("price")
-    prev = d.get("previousClose")
+def _fmp_history(symbol, key):
+    """Histórico diário (data, preço de fechamento) via endpoint light, que
+    está no plano gratuito. Retorna lista de closes em ordem cronológica."""
     try:
-        if price is not None and prev not in (None, 0):
-            return (float(price) / float(prev) - 1) * 100
-    except (TypeError, ValueError):
-        pass
-    return None
+        data = get_json(f"{FMP_BASE}/historical-price-eod/light",
+                        params={"symbol": symbol, "apikey": key})
+        if not data or not isinstance(data, list):
+            return []
+        # o FMP devolve do mais recente para o mais antigo; invertemos
+        closes = []
+        for row in reversed(data):
+            px = row.get("price", row.get("close"))
+            if px is not None:
+                closes.append(float(px))
+        return closes
+    except Exception:  # noqa: BLE001
+        return []
+
+
+def _calc_rsi(closes, period=14):
+    """RSI de Wilder a partir da série de fechamentos. Calculado por nós, sem
+    depender do endpoint de indicador (que é premium no FMP)."""
+    if len(closes) < period + 1:
+        return None
+    ganhos, perdas = [], []
+    for i in range(1, len(closes)):
+        ch = closes[i] - closes[i - 1]
+        ganhos.append(max(ch, 0.0))
+        perdas.append(max(-ch, 0.0))
+    ag = sum(ganhos[:period]) / period
+    ap = sum(perdas[:period]) / period
+    for i in range(period, len(ganhos)):
+        ag = (ag * (period - 1) + ganhos[i]) / period
+        ap = (ap * (period - 1) + perdas[i]) / period
+    if ap == 0:
+        return 100.0
+    rs = ag / ap
+    return round(100 - 100 / (1 + rs), 1)
+
+
+def _fmp_asset(symbol, key):
+    """Um ativo completo: preço, variação do dia e RSII, tudo derivado do
+    histórico diário (1 requisição, tudo no plano gratuito)."""
+    closes = _fmp_history(symbol, key)
+    if not closes:
+        return None
+    price = closes[-1]
+    chg = None
+    if len(closes) >= 2 and closes[-2]:
+        chg = (closes[-1] / closes[-2] - 1) * 100
+    rsi = _calc_rsi(closes, 14)
+    return {"price": round(price, 2),
+            "chg_pct": round(chg, 2) if chg is not None else None,
+            "rsi": rsi}
 
 
 def _fmp_quotes(symbols, key):
-    """Cotação via endpoint stable, um símbolo por vez (o /stable/quote é
-    confiável assim). Cada quote já traz price e a variação."""
+    """Preço + variação + RSI de cada símbolo, via histórico (plano grátis)."""
     out = {}
     for s in symbols:
-        try:
-            d = get_json(f"{FMP_BASE}/quote", params={"symbol": s, "apikey": key})
-            if d and isinstance(d, list):
-                out[s] = d[0]
-        except Exception:  # noqa: BLE001
-            pass
+        a = _fmp_asset(s, key)
+        if a:
+            out[s] = a
     return out
 
 
 def _fmp_rsi(symbol, key):
-    """RSI diário (14) via endpoint stable. 1 requisição por símbolo."""
-    try:
-        data = get_json(f"{FMP_BASE}/technical-indicators/rsi",
-                        params={"symbol": symbol, "periodLength": 14,
-                                "timeframe": "1day", "apikey": key})
-        if data and isinstance(data, list):
-            v = data[0].get("rsi")
-            return round(float(v), 1) if v is not None else None
-    except Exception:  # noqa: BLE001
-        pass
+    """Mantido por compatibilidade — o RSI agora vem junto em _fmp_quotes."""
     return None
 
 
@@ -825,11 +857,11 @@ def fetch_us_stocks(setores_cache=None):
     out = []
     for sym in US_STOCKS:
         q = quotes.get(sym) or {}
-        rsi = _fmp_rsi(sym, key)
+        rsi = q.get("rsi")
         out.append({
-            "symbol": sym, "name": q.get("name"),
+            "symbol": sym, "name": None,
             "price": q.get("price"),
-            "chg_pct": _fmp_pct(q),
+            "chg_pct": q.get("chg_pct"),
             "sector": setores.get(sym),
             "rsi": rsi, "rsi_zone": _fmp_rsi_zone(rsi),
         })
@@ -849,18 +881,18 @@ def fetch_us_etfs():
     out = []
     for sym in US_ETFS:
         q = quotes.get(sym) or {}
-        rsi = _fmp_rsi(sym, key)
+        rsi = q.get("rsi")
         out.append({
             "symbol": sym, "label": ETF_LABELS.get(sym, ""),
-            "price": q.get("price"), "chg_pct": _fmp_pct(q),
+            "price": q.get("price"), "chg_pct": q.get("chg_pct"),
             "rsi": rsi, "rsi_zone": _fmp_rsi_zone(rsi), "kind": "etf",
         })
     for sym, label in US_COMMODITIES.items():
         q = quotes.get(sym) or {}
-        rsi = _fmp_rsi(sym, key)
+        rsi = q.get("rsi")
         out.append({
             "symbol": label, "label": "Metal",
-            "price": q.get("price"), "chg_pct": _fmp_pct(q),
+            "price": q.get("price"), "chg_pct": q.get("chg_pct"),
             "rsi": rsi, "rsi_zone": _fmp_rsi_zone(rsi), "kind": "commodity",
         })
     if not any(x["price"] is not None for x in out):
