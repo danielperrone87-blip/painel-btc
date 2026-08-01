@@ -729,16 +729,34 @@ def _fmp_rsi_zone(rsi):
 
 
 def _fmp_quotes(symbols, key):
-    """Cotação em lote (1 requisição p/ vários tickers) — economiza quota."""
-    data = get_json(f"{FMP_BASE}/quote/{','.join(symbols)}", params={"apikey": key})
-    return {d.get("symbol"): d for d in (data or [])}
+    """Cotação via endpoint stable. Tenta em lote (symbol=A,B,C); se a conta
+    gratuita não aceitar lote, cai para um símbolo por vez."""
+    out = {}
+    try:
+        data = get_json(f"{FMP_BASE}/quote",
+                        params={"symbol": ",".join(symbols), "apikey": key})
+        for d in (data or []):
+            out[d.get("symbol")] = d
+    except Exception:  # noqa: BLE001
+        pass
+    # completa os que faltaram (ou tudo, se o lote falhou) um a um
+    faltantes = [s for s in symbols if s not in out]
+    for s in faltantes:
+        try:
+            d = get_json(f"{FMP_BASE}/quote", params={"symbol": s, "apikey": key})
+            if d and isinstance(d, list):
+                out[s] = d[0]
+        except Exception:  # noqa: BLE001
+            pass
+    return out
 
 
 def _fmp_rsi(symbol, key):
-    """RSI diário (14). 1 requisição por símbolo."""
+    """RSI diário (14) via endpoint stable. 1 requisição por símbolo."""
     try:
-        data = get_json(f"{FMP_BASE}/technical_indicator/1day/{symbol}",
-                        params={"period": 14, "type": "rsi", "apikey": key})
+        data = get_json(f"{FMP_BASE}/technical-indicators/rsi",
+                        params={"symbol": symbol, "periodLength": 14,
+                                "timeframe": "1day", "apikey": key})
         if data and isinstance(data, list):
             v = data[0].get("rsi")
             return round(float(v), 1) if v is not None else None
@@ -748,21 +766,27 @@ def _fmp_rsi(symbol, key):
 
 
 @source("Ações EUA (FMP)")
-def fetch_us_stocks():
-    """Ações americanas: preço, variação, RSI e setor via FMP."""
+def fetch_us_stocks(setores_cache=None):
+    """Ações americanas: preço, variação, RSI e setor via FMP.
+    setores_cache: dict {symbol: sector} reaproveitado de rodadas anteriores
+    (setor não muda, então não gastamos requisição com ele toda vez)."""
     key = os.environ.get("FMP_API_KEY", "").strip()
     if not key:
         raise RuntimeError("sem FMP_API_KEY (opcional)")
 
     quotes = _fmp_quotes(US_STOCKS, key)
-    setores = {}
-    try:
-        prof = get_json(f"{FMP_BASE}/profile/{','.join(US_STOCKS)}",
-                        params={"apikey": key})
-        for p in (prof or []):
-            setores[p.get("symbol")] = p.get("sector")
-    except Exception:  # noqa: BLE001
-        pass
+    setores = dict(setores_cache or {})
+    # só busca setor dos que ainda não temos em cache
+    for sym in US_STOCKS:
+        if setores.get(sym):
+            continue
+        try:
+            prof = get_json(f"{FMP_BASE}/profile",
+                            params={"symbol": sym, "apikey": key})
+            if prof and isinstance(prof, list):
+                setores[sym] = prof[0].get("sector")
+        except Exception:  # noqa: BLE001
+            pass
 
     out = []
     for sym in US_STOCKS:
@@ -949,8 +973,49 @@ def main():
     if etf_alts:
         etf.update(etf_alts)
     etf = etf or None
-    us_stocks = fetch_us_stocks()
-    us_etfs = fetch_us_etfs()
+
+    # --- Mercado americano (FMP) com cache de quota ---
+    # O plano gratuito do FMP dá 250 req/dia. Como cada rodada consome dezenas
+    # de requisições (RSI + setor por ativo) e o painel roda a cada 30 min,
+    # buscar sempre estouraria o limite. Então só rebuscamos a parte americana
+    # a cada FMP_REFRESH_MIN minutos; nas rodadas intermediárias, reaproveitamos
+    # o que já está no data.json anterior.
+    FMP_REFRESH_MIN = 360  # 6h -> ~4 buscas/dia; com ~55 req cada = ~220/dia (< 250)
+    us_stocks, us_etfs = None, None
+    prev = {}
+    try:
+        prev = json.loads((ROOT / "data.json").read_text(encoding="utf-8"))
+    except Exception:  # noqa: BLE001
+        pass
+
+    prev_ts = prev.get("us_market_ts")
+    precisa = True
+    if prev_ts:
+        try:
+            idade = (now - datetime.fromisoformat(prev_ts)).total_seconds() / 60
+            precisa = idade >= FMP_REFRESH_MIN
+        except Exception:  # noqa: BLE001
+            precisa = True
+
+    if precisa:
+        # reaproveita setores já conhecidos (não mudam) para poupar requisições
+        setores_cache = {}
+        for s in (prev.get("us_stocks") or []):
+            if s.get("sector"):
+                setores_cache[s["symbol"]] = s["sector"]
+        us_stocks = fetch_us_stocks(setores_cache)
+        us_etfs = fetch_us_etfs()
+        us_market_ts = now.isoformat()
+    else:
+        # reaproveita do data.json anterior (economiza quota)
+        us_stocks = prev.get("us_stocks")
+        us_etfs = prev.get("us_etfs")
+        us_market_ts = prev_ts
+        SOURCES["Ações EUA (FMP)"] = {"ok": bool(us_stocks),
+                                      "detail": "cache (economia de quota)"}
+        SOURCES["ETFs EUA (FMP)"] = {"ok": bool(us_etfs),
+                                     "detail": "cache (economia de quota)"}
+
     live_price = (market or {}).get("btc", {}).get("price")
     price_series = (cbbi or {}).get("price_series", {})
 
@@ -987,6 +1052,7 @@ def main():
         "etf_links": ETF_LINKS,
         "us_stocks": us_stocks,
         "us_etfs": us_etfs,
+        "us_market_ts": us_market_ts,
         "onchain_links": CHECKONCHAIN_LINKS,
         "insights": insights,
         "network": net,
