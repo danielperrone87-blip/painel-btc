@@ -192,7 +192,13 @@ if (typeof Chart === "undefined") {
     .px b{font-size:31px}
     .grid{grid-template-columns:repeat(auto-fill,minmax(132px,1fr))}
     thead th.hide,tbody td.hide{display:none}
+    thead th.hide2,tbody td.hide2{display:none}
   }
+  .oc-links{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:4px}
+  .oc-chip{display:inline-block;padding:9px 13px;border-radius:10px;
+    border:1px solid var(--line);background:var(--surface);color:var(--text);
+    font-family:var(--mono);font-size:11.5px;text-decoration:none;transition:.15s}
+  .oc-chip:hover{border-color:var(--cold);color:var(--cold)}
   @media (prefers-reduced-motion:reduce){*{transition:none!important}}
   :focus-visible{outline:2px solid var(--cold);outline-offset:2px}
 </style>
@@ -446,13 +452,16 @@ function render(d){
         <td>${fmtUSD(a.price)}</td>
         <td class="${cls(a.chg24h)}">${fmtPct(a.chg24h)}</td>
         <td class="${cls(a.chg7d)}">${fmtPct(a.chg7d)}</td>
+        <td class="${cls(a.chg30d)} hide2">${fmtPct(a.chg30d)}</td>
+        <td class="${cls(a.chg1y)} hide2">${fmtPct(a.chg1y)}</td>
         <td class="${cls(a.chg7d_btc)}"><b>${fmtPct(a.chg7d_btc)}</b></td>
         <td class="hide">US$ ${big(a.mcap)}</td></tr>`;
-      if(a.note) r+=`<tr class="${foco?"focus":""}"><td colspan="6" class="rownote">↳ ${a.note}</td></tr>`;
+      if(a.note) r+=`<tr class="${foco?"focus":""}"><td colspan="8" class="rownote">↳ ${a.note}</td></tr>`;
       return r;
     }).join("");
     h+=`<section><h2>Altcoins</h2><table>
       <thead><tr><th>Ativo</th><th>Preço</th><th>24h</th><th>7d</th>
+        <th class="hide2">30d</th><th class="hide2">1a</th>
         <th>7d vs BTC <span class="help" data-desc="${DESCRICOES.vs_btc.replace(/"/g,'&quot;')}">?</span></th><th class="hide">Cap.</th></tr></thead>
       <tbody>${linhas}</tbody></table></section>`;
   }
@@ -499,6 +508,50 @@ function render(d){
     h+=`<section><h2>Fluxos de ETF</h2>
       <div class="etf-off">Não foi possível ler os fluxos de ETF nesta atualização.
       O restante do painel segue normal.${linksHtml}</div></section>`;
+  }
+
+  // ---------- ações americanas
+  const rsiBadge=(z)=>z?`<span class="zone-badge zone-${z}">${z}</span>`:"";
+  const stocks=d.us_stocks||[];
+  if(stocks.length){
+    const linhasA=stocks.filter(s=>s.price!=null).map(s=>`<tr>
+      <td>${s.symbol}</td>
+      <td>${fmtUSD(s.price)}</td>
+      <td class="${cls(s.chg_pct)}">${fmtPct(s.chg_pct)}</td>
+      <td class="hide2" style="text-align:left;color:var(--muted)">${s.sector||"—"}</td>
+      <td>${s.rsi!=null?s.rsi.toFixed(0):"—"}${rsiBadge(s.rsi_zone)}</td>
+    </tr>`).join("");
+    if(linhasA) h+=`<section><h2>Ações EUA <span class="help" data-desc="Preço, variação no dia, setor e RSI (14). RSI acima de 70 = sobrecomprado; abaixo de 30 = sobrevendido.">?</span></h2>
+      <table><thead><tr><th>Ativo</th><th>Preço</th><th>Dia</th>
+        <th class="hide2">Setor</th><th>RSI</th></tr></thead>
+      <tbody>${linhasA}</tbody></table></section>`;
+  }
+
+  // ---------- ETFs e commodities americanos
+  const usetfs=d.us_etfs||[];
+  if(usetfs.length){
+    const linhasE=usetfs.filter(s=>s.price!=null).map(s=>`<tr>
+      <td>${s.symbol}</td>
+      <td>${fmtUSD(s.price)}</td>
+      <td class="${cls(s.chg_pct)}">${fmtPct(s.chg_pct)}</td>
+      <td class="hide2" style="text-align:left;color:var(--muted)">${s.label||"—"}</td>
+      <td>${s.rsi!=null?s.rsi.toFixed(0):"—"}${rsiBadge(s.rsi_zone)}</td>
+    </tr>`).join("");
+    if(linhasE) h+=`<section><h2>ETFs e metais EUA <span class="help" data-desc="ETFs setoriais/temáticos e metais (ouro, prata, cobre). Setor/tema e RSI (14).">?</span></h2>
+      <table><thead><tr><th>Ativo</th><th>Preço</th><th>Dia</th>
+        <th class="hide2">Setor/Tema</th><th>RSI</th></tr></thead>
+      <tbody>${linhasE}</tbody></table></section>`;
+  }
+
+  // ---------- on-chain avançado (links Checkonchain)
+  const ocLinks=d.onchain_links||[];
+  if(ocLinks.length){
+    h+=`<section><h2>On-chain avançado <span class="help" data-desc="Métricas on-chain de holders de curto e longo prazo (Checkonchain). Não há API gratuita — os links abrem o gráfico completo e atualizado na fonte.">?</span></h2>
+      <div class="oc-links">${ocLinks.map(l=>
+        `<a href="${l.url}" target="_blank" rel="noopener" class="oc-chip">${l.label} ↗</a>`
+      ).join("")}</div>
+      <div class="chart-note">Estas métricas on-chain não têm fonte gratuita para leitura automática. Os links abrem o gráfico atualizado no Checkonchain.</div>
+    </section>`;
   }
 
   // ---------- macro
