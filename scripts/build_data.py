@@ -800,20 +800,29 @@ def _calc_rsi(closes, period=14):
     return round(100 - 100 / (1 + rs), 1)
 
 
+def _var_pct(closes, dias):
+    """Variação % entre o último preço e o de 'dias' pregões atrás."""
+    if len(closes) > dias and closes[-1 - dias]:
+        return round((closes[-1] / closes[-1 - dias] - 1) * 100, 2)
+    return None
+
+
 def _fmp_asset(symbol, key):
-    """Um ativo completo: preço, variação do dia e RSII, tudo derivado do
-    histórico diário (1 requisição, tudo no plano gratuito)."""
+    """Um ativo completo: preço, variações (dia/7d/30d/1a) e RSI, tudo derivado
+    do histórico diário (1 requisição, tudo no plano gratuito).
+    Também guarda 'closes' para cálculos relativos (vs BTC, vs Nasdaq)."""
     closes = _fmp_history(symbol, key)
     if not closes:
         return None
     price = closes[-1]
-    chg = None
-    if len(closes) >= 2 and closes[-2]:
-        chg = (closes[-1] / closes[-2] - 1) * 100
     rsi = _calc_rsi(closes, 14)
     return {"price": round(price, 2),
-            "chg_pct": round(chg, 2) if chg is not None else None,
-            "rsi": rsi}
+            "chg_pct": _var_pct(closes, 1),
+            "chg7d": _var_pct(closes, 5),      # ~5 pregões = 1 semana
+            "chg30d": _var_pct(closes, 21),    # ~21 pregões = 1 mês
+            "chg1y": _var_pct(closes, 252),    # ~252 pregões = 1 ano
+            "rsi": rsi,
+            "_closes": closes}                 # usado só internamente
 
 
 def _fmp_quotes(symbols, key):
@@ -832,17 +841,21 @@ def _fmp_rsi(symbol, key):
 
 
 @source("Ações EUA (FMP)")
-def fetch_us_stocks(setores_cache=None):
-    """Ações americanas: preço, variação, RSI e setor via FMP.
-    setores_cache: dict {symbol: sector} reaproveitado de rodadas anteriores
-    (setor não muda, então não gastamos requisição com ele toda vez)."""
+def fetch_us_stocks(setores_cache=None, bench=None):
+    """Ações americanas: preço, variações (dia/7d/30d/1a), RSI, setor e
+    desempenho relativo vs BTC e vs Nasdaq (janela de 30 pregões).
+    bench: dict {'btc': ret30, 'ndx': ret30} com o retorno de 30d de cada
+    referência (calculado uma vez pela main)."""
     key = os.environ.get("FMP_API_KEY", "").strip()
     if not key:
         raise RuntimeError("sem FMP_API_KEY (opcional)")
 
+    bench = bench or {}
+    btc30 = bench.get("btc")
+    ndx30 = bench.get("ndx")
+
     quotes = _fmp_quotes(US_STOCKS, key)
     setores = dict(setores_cache or {})
-    # só busca setor dos que ainda não temos em cache
     for sym in US_STOCKS:
         if setores.get(sym):
             continue
@@ -858,12 +871,19 @@ def fetch_us_stocks(setores_cache=None):
     for sym in US_STOCKS:
         q = quotes.get(sym) or {}
         rsi = q.get("rsi")
+        r30 = q.get("chg30d")
         out.append({
             "symbol": sym, "name": None,
             "price": q.get("price"),
             "chg_pct": q.get("chg_pct"),
+            "chg7d": q.get("chg7d"),
+            "chg30d": r30,
+            "chg1y": q.get("chg1y"),
             "sector": setores.get(sym),
             "rsi": rsi, "rsi_zone": _fmp_rsi_zone(rsi),
+            # desempenho relativo (30d): quanto o ativo bateu/perdeu da referência
+            "vs_btc": round(r30 - btc30, 1) if (r30 is not None and btc30 is not None) else None,
+            "vs_ndx": round(r30 - ndx30, 1) if (r30 is not None and ndx30 is not None) else None,
         })
     if not any(x["price"] is not None for x in out):
         raise RuntimeError("FMP não retornou cotações de ações")
@@ -871,29 +891,44 @@ def fetch_us_stocks(setores_cache=None):
 
 
 @source("ETFs EUA (FMP)")
-def fetch_us_etfs():
-    """ETFs setoriais + commodities (ouro/prata/cobre) via FMP."""
+def fetch_us_etfs(bench=None):
+    """ETFs setoriais + commodities (ouro/prata/cobre) via FMP, com variações
+    de 7d/30d/1a e desempenho relativo vs BTC e vs Nasdaq (30d)."""
     key = os.environ.get("FMP_API_KEY", "").strip()
     if not key:
         raise RuntimeError("sem FMP_API_KEY (opcional)")
+
+    bench = bench or {}
+    btc30 = bench.get("btc")
+    ndx30 = bench.get("ndx")
+
+    def rel(r30):
+        return (round(r30 - btc30, 1) if (r30 is not None and btc30 is not None) else None,
+                round(r30 - ndx30, 1) if (r30 is not None and ndx30 is not None) else None)
 
     quotes = _fmp_quotes(US_ETFS + list(US_COMMODITIES), key)
     out = []
     for sym in US_ETFS:
         q = quotes.get(sym) or {}
-        rsi = q.get("rsi")
+        rsi = q.get("rsi"); r30 = q.get("chg30d")
+        vb, vn = rel(r30)
         out.append({
             "symbol": sym, "label": ETF_LABELS.get(sym, ""),
             "price": q.get("price"), "chg_pct": q.get("chg_pct"),
-            "rsi": rsi, "rsi_zone": _fmp_rsi_zone(rsi), "kind": "etf",
+            "chg7d": q.get("chg7d"), "chg30d": r30, "chg1y": q.get("chg1y"),
+            "rsi": rsi, "rsi_zone": _fmp_rsi_zone(rsi),
+            "vs_btc": vb, "vs_ndx": vn, "kind": "etf",
         })
     for sym, label in US_COMMODITIES.items():
         q = quotes.get(sym) or {}
-        rsi = q.get("rsi")
+        rsi = q.get("rsi"); r30 = q.get("chg30d")
+        vb, vn = rel(r30)
         out.append({
             "symbol": label, "label": "Metal",
             "price": q.get("price"), "chg_pct": q.get("chg_pct"),
-            "rsi": rsi, "rsi_zone": _fmp_rsi_zone(rsi), "kind": "commodity",
+            "chg7d": q.get("chg7d"), "chg30d": r30, "chg1y": q.get("chg1y"),
+            "rsi": rsi, "rsi_zone": _fmp_rsi_zone(rsi),
+            "vs_btc": vb, "vs_ndx": vn, "kind": "commodity",
         })
     if not any(x["price"] is not None for x in out):
         raise RuntimeError("FMP não retornou cotações de ETFs")
@@ -1069,8 +1104,27 @@ def main():
         for s in (prev.get("us_stocks") or []):
             if s.get("sector"):
                 setores_cache[s["symbol"]] = s["sector"]
-        us_stocks = fetch_us_stocks(setores_cache)
-        us_etfs = fetch_us_etfs()
+
+        # Benchmarks para o desempenho relativo (retorno de ~30 pregões):
+        # BTC (da série de preço que já temos) e Nasdaq (QQQ via FMP).
+        bench = {}
+        try:
+            btc_closes = [price_series[k] for k in sorted(price_series)]
+            if len(btc_closes) > 30 and btc_closes[-31]:
+                bench["btc"] = round((btc_closes[-1] / btc_closes[-31] - 1) * 100, 2)
+        except Exception:  # noqa: BLE001
+            pass
+        try:
+            key_fmp = os.environ.get("FMP_API_KEY", "").strip()
+            if key_fmp:
+                ndx = _fmp_history("QQQ", key_fmp)
+                if len(ndx) > 21 and ndx[-22]:
+                    bench["ndx"] = round((ndx[-1] / ndx[-22] - 1) * 100, 2)
+        except Exception:  # noqa: BLE001
+            pass
+
+        us_stocks = fetch_us_stocks(setores_cache, bench)
+        us_etfs = fetch_us_etfs(bench)
         us_market_ts = now.isoformat()
     else:
         # reaproveita do data.json anterior (economiza quota)
