@@ -518,13 +518,22 @@ function render(d){
       <td>${s.symbol}</td>
       <td>${fmtUSD(s.price)}</td>
       <td class="${cls(s.chg_pct)}">${fmtPct(s.chg_pct)}</td>
+      <td class="${cls(s.chg7d)} hide2">${fmtPct(s.chg7d)}</td>
+      <td class="${cls(s.chg30d)} hide2">${fmtPct(s.chg30d)}</td>
+      <td class="${cls(s.chg1y)} hide2">${fmtPct(s.chg1y)}</td>
+      <td class="${cls(s.vs_btc)} hide2"><b>${fmtPct(s.vs_btc)}</b></td>
+      <td class="${cls(s.vs_ndx)} hide2"><b>${fmtPct(s.vs_ndx)}</b></td>
       <td class="hide2" style="text-align:left;color:var(--muted)">${s.sector||"—"}</td>
       <td>${s.rsi!=null?s.rsi.toFixed(0):"—"}${rsiBadge(s.rsi_zone)}</td>
     </tr>`).join("");
-    if(linhasA) h+=`<section><h2>Ações EUA <span class="help" data-desc="Preço, variação no dia, setor e RSI (14). RSI acima de 70 = sobrecomprado; abaixo de 30 = sobrevendido.">?</span></h2>
+    if(linhasA) h+=`<section><h2>Ações EUA <span class="help" data-desc="Preço e variações (dia/7d/30d/1a). vs BTC e vs Nasdaq comparam o retorno de 30 dias do ativo com o do Bitcoin e do índice Nasdaq (QQQ): positivo = o ativo rendeu mais que a referência. RSI: acima de 70 sobrecomprado, abaixo de 30 sobrevendido.">?</span></h2>
       <table><thead><tr><th>Ativo</th><th>Preço</th><th>Dia</th>
+        <th class="hide2">7d</th><th class="hide2">30d</th><th class="hide2">1a</th>
+        <th class="hide2">vs BTC</th><th class="hide2">vs NDX</th>
         <th class="hide2">Setor</th><th>RSI</th></tr></thead>
-      <tbody>${linhasA}</tbody></table></section>`;
+      <tbody>${linhasA}</tbody></table>
+      <div class="chart-note">"vs BTC" e "vs NDX" = desempenho em 30 dias comparado ao Bitcoin e ao Nasdaq. Verde = superou a referência.</div>
+      </section>`;
   }
 
   // ---------- ETFs e commodities americanos
@@ -534,11 +543,18 @@ function render(d){
       <td>${s.symbol}</td>
       <td>${fmtUSD(s.price)}</td>
       <td class="${cls(s.chg_pct)}">${fmtPct(s.chg_pct)}</td>
+      <td class="${cls(s.chg7d)} hide2">${fmtPct(s.chg7d)}</td>
+      <td class="${cls(s.chg30d)} hide2">${fmtPct(s.chg30d)}</td>
+      <td class="${cls(s.chg1y)} hide2">${fmtPct(s.chg1y)}</td>
+      <td class="${cls(s.vs_btc)} hide2"><b>${fmtPct(s.vs_btc)}</b></td>
+      <td class="${cls(s.vs_ndx)} hide2"><b>${fmtPct(s.vs_ndx)}</b></td>
       <td class="hide2" style="text-align:left;color:var(--muted)">${s.label||"—"}</td>
       <td>${s.rsi!=null?s.rsi.toFixed(0):"—"}${rsiBadge(s.rsi_zone)}</td>
     </tr>`).join("");
-    if(linhasE) h+=`<section><h2>ETFs e metais EUA <span class="help" data-desc="ETFs setoriais/temáticos e metais (ouro, prata, cobre). Setor/tema e RSI (14).">?</span></h2>
+    if(linhasE) h+=`<section><h2>ETFs e metais EUA <span class="help" data-desc="ETFs setoriais/temáticos e metais (ouro, prata, cobre). Variações dia/7d/30d/1a, comparação de 30d vs BTC e vs Nasdaq, e RSI (14).">?</span></h2>
       <table><thead><tr><th>Ativo</th><th>Preço</th><th>Dia</th>
+        <th class="hide2">7d</th><th class="hide2">30d</th><th class="hide2">1a</th>
+        <th class="hide2">vs BTC</th><th class="hide2">vs NDX</th>
         <th class="hide2">Setor/Tema</th><th>RSI</th></tr></thead>
       <tbody>${linhasE}</tbody></table></section>`;
   }
