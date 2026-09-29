@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-29T14:12:10.051287+00:00",
-  "generated_at_br": "29/09/2026 11:12",
+  "generated_at": "2026-09-29T19:32:15.740609+00:00",
+  "generated_at_br": "29/09/2026 16:32",
   "cbbi": {
     "picycle": {
       "label": "Pi Cycle Top",
@@ -72,16 +72,16 @@
     "last_halving": "2024-04-20",
     "days_since_halving": 892,
     "next_halving_block": 1050000,
-    "blocks_to_halving": 80838,
+    "blocks_to_halving": 80808,
     "est_next_halving": "2028-04-12"
   },
   "market": null,
   "derivatives": {
-    "funding_rate_pct": 0.00055557152045,
-    "next_funding": "1790726400000",
-    "open_interest_btc": 28026.270200000083,
-    "open_interest_usd": 2350442768.7121468,
-    "mark_price": 83861.6
+    "funding_rate_pct": 0.01,
+    "next_funding": "1790755200000",
+    "open_interest_btc": 28039.533500000074,
+    "open_interest_usd": 2342921732.2863064,
+    "mark_price": 83551.9
   },
   "fear_greed": {
     "value": 73,
@@ -89,7 +89,7 @@
     "previous": 74
   },
   "altseason": {
-    "value": 61.0,
+    "value": 60.0,
     "source": "CMC (top 100)",
     "note": "0-25 temporada do BTC · 75-100 temporada de alts"
   },
@@ -637,13 +637,13 @@
     "disclaimer": "Leitura descritiva dos dados, não recomendação de compra ou venda."
   },
   "network": {
-    "block_height": 969162,
-    "hashrate": 953615740123461200000,
+    "block_height": 969192,
+    "hashrate": 959954766545363800000,
     "difficulty": 132757073449487.5,
-    "difficulty_change_pct": 0.046661457074259616,
-    "blocks_to_retarget": 534,
-    "fee_fast": 3,
-    "fee_economy": 1
+    "difficulty_change_pct": -0.08716783770934544,
+    "blocks_to_retarget": 504,
+    "fee_fast": 4,
+    "fee_economy": 2
   },
   "macro": null,
   "sources": {
@@ -685,11 +685,11 @@
     },
     "Ações EUA (FMP)": {
       "ok": true,
-      "detail": "ok"
+      "detail": "cache (economia de quota)"
     },
     "ETFs EUA (FMP)": {
       "ok": true,
-      "detail": "ok"
+      "detail": "cache (economia de quota)"
     }
   }
 }
