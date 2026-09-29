@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-29T05:05:28.681986+00:00",
-  "generated_at_br": "29/09/2026 02:05",
+  "generated_at": "2026-09-29T07:14:59.218566+00:00",
+  "generated_at_br": "29/09/2026 04:14",
   "cbbi": {
     "picycle": {
       "label": "Pi Cycle Top",
@@ -72,16 +72,16 @@
     "last_halving": "2024-04-20",
     "days_since_halving": 892,
     "next_halving_block": 1050000,
-    "blocks_to_halving": 80903,
-    "est_next_halving": "2028-04-13"
+    "blocks_to_halving": 80883,
+    "est_next_halving": "2028-04-12"
   },
   "market": null,
   "derivatives": {
-    "funding_rate_pct": 0.0040750126659899995,
+    "funding_rate_pct": 0.00294483742061,
     "next_funding": "1790697600000",
-    "open_interest_btc": 28743.51180000009,
-    "open_interest_usd": 2391532040.5395074,
-    "mark_price": 83217.3
+    "open_interest_btc": 28174.697000000106,
+    "open_interest_usd": 2365203828.816609,
+    "mark_price": 83948.0
   },
   "fear_greed": {
     "value": 73,
@@ -89,16 +89,16 @@
     "previous": 74
   },
   "altseason": {
-    "value": 59.0,
+    "value": 61.0,
     "source": "CMC (top 100)",
     "note": "0-25 temporada do BTC · 75-100 temporada de alts"
   },
   "etf": {
     "BTC": {
-      "last_day": 134.0,
+      "last_day": -24.0,
       "last_date": null,
-      "week": 2386.0,
-      "month": 3003.0,
+      "week": 1363.0,
+      "month": 2939.0,
       "cumulative": null,
       "unit": "US$ mi"
     }
@@ -637,11 +637,11 @@
     "disclaimer": "Leitura descritiva dos dados, não recomendação de compra ou venda."
   },
   "network": {
-    "block_height": 969097,
-    "hashrate": 945393346217114100000,
+    "block_height": 969117,
+    "hashrate": 946093630668292800000,
     "difficulty": 132757073449487.5,
-    "difficulty_change_pct": -0.675356211000655,
-    "blocks_to_retarget": 599,
+    "difficulty_change_pct": -0.17990293340119923,
+    "blocks_to_retarget": 579,
     "fee_fast": 2,
     "fee_economy": 1
   },
