@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-10-04T20:18:55.834021+00:00",
-  "generated_at_br": "04/10/2026 17:18",
+  "generated_at": "2026-10-04T23:25:32.995306+00:00",
+  "generated_at_br": "04/10/2026 20:25",
   "cbbi": {
     "picycle": {
       "label": "Pi Cycle Top",
@@ -49,17 +49,17 @@
     }
   },
   "models": {
-    "price": 85429,
+    "price": 86591,
     "ath": 124824.4537,
-    "drawdown_from_ath": -31.56068585301567,
+    "drawdown_from_ath": -30.62977851430404,
     "ma200": 71422.20370299999,
-    "mayer_multiple": 1.1961126312378356,
+    "mayer_multiple": 1.2123820816293696,
     "ma730": 88767.09328356165,
-    "ma730_multiple": 0.9623949240638274,
+    "ma730_multiple": 0.9754853605872815,
     "ma111": 70245.0077945946,
     "pi_cycle_top_line": 155949.7833657143,
     "pi_cycle_gap_pct": -54.95664932738982,
-    "ytd_pct": -3.6705716989477666,
+    "ytd_pct": -2.3603047440984515,
     "stoch_rsi": {
       "value": 23.1,
       "k": 23.1,
@@ -72,17 +72,17 @@
     "last_halving": "2024-04-20",
     "days_since_halving": 897,
     "next_halving_block": 1050000,
-    "blocks_to_halving": 80105,
+    "blocks_to_halving": 80083,
     "est_next_halving": "2028-04-13"
   },
   "market": {
     "btc": {
-      "price": 85429,
-      "chg24h": 0.66542,
-      "chg7d": 0.723,
-      "chg30d": 7.2695,
-      "chg1y": -29.7863,
-      "mcap": 1716541788877
+      "price": 86591,
+      "chg24h": 2.11746,
+      "chg7d": 2.031,
+      "chg30d": 8.4665,
+      "chg1y": -29.3196,
+      "mcap": 1739898157792
     },
     "alts": [
       {
@@ -90,180 +90,180 @@
         "name": "Ethereum",
         "note": null,
         "vs_btc_focus": false,
-        "price": 2700.32,
-        "mcap": 329721444318,
-        "chg24h": 0.48751,
-        "chg7d": 0.1408,
-        "chg30d": 10.2293,
-        "chg1y": -39.4004,
-        "price_btc": 0.03162172,
-        "chg7d_btc": 0.1408,
-        "chg30d_btc": 10.2293
+        "price": 2731.24,
+        "mcap": 333497151082,
+        "chg24h": 1.63234,
+        "chg7d": 1.6582,
+        "chg30d": 11.2719,
+        "chg1y": -39.1806,
+        "price_btc": 0.03154403,
+        "chg7d_btc": 1.6582,
+        "chg30d_btc": 11.2719
       },
       {
         "symbol": "BNB",
         "name": "BNB",
         "note": null,
         "vs_btc_focus": false,
-        "price": 789.7,
-        "mcap": 105156156150,
-        "chg24h": 0.08792,
-        "chg7d": 1.3295,
-        "chg30d": 9.7897,
-        "chg1y": -31.0254,
-        "price_btc": 0.00924701,
-        "chg7d_btc": 1.3295,
-        "chg30d_btc": 9.7897
+        "price": 795.77,
+        "mcap": 105963801038,
+        "chg24h": 1.00294,
+        "chg7d": 2.0077,
+        "chg30d": 10.8216,
+        "chg1y": -31.0288,
+        "price_btc": 0.0091915,
+        "chg7d_btc": 2.0077,
+        "chg30d_btc": 10.8216
       },
       {
         "symbol": "SOL",
         "name": "Solana",
         "note": null,
         "vs_btc_focus": false,
-        "price": 120.9,
-        "mcap": 71122985628,
-        "chg24h": 0.80185,
-        "chg7d": -1.6871,
-        "chg30d": 19.2008,
-        "chg1y": -46.4131,
-        "price_btc": 0.00141574,
-        "chg7d_btc": -1.6871,
-        "chg30d_btc": 19.2008
+        "price": 121.81,
+        "mcap": 71661157095,
+        "chg24h": 1.7077,
+        "chg7d": -0.9546,
+        "chg30d": 19.7525,
+        "chg1y": -46.5049,
+        "price_btc": 0.00140678,
+        "chg7d_btc": -0.9546,
+        "chg30d_btc": 19.7525
       },
       {
         "symbol": "HYPE",
         "name": "Hyperliquid",
         "note": null,
         "vs_btc_focus": false,
-        "price": 90.43,
-        "mcap": 20120230099,
-        "chg24h": 1.32053,
-        "chg7d": -1.9478,
-        "chg30d": 6.0738,
-        "chg1y": 86.5667,
-        "price_btc": 0.00105889,
-        "chg7d_btc": -1.9478,
-        "chg30d_btc": 6.0738
+        "price": 90.42,
+        "mcap": 20114015548,
+        "chg24h": 1.24565,
+        "chg7d": -1.1422,
+        "chg30d": 7.7633,
+        "chg1y": 85.2236,
+        "price_btc": 0.00104419,
+        "chg7d_btc": -1.1422,
+        "chg30d_btc": 7.7633
       },
       {
         "symbol": "ZEC",
         "name": "Zcash",
         "note": null,
         "vs_btc_focus": false,
-        "price": 1333.68,
-        "mcap": 22629209536,
-        "chg24h": 0.49946,
-        "chg7d": -17.4192,
-        "chg30d": 29.8121,
-        "chg1y": 708.6398,
-        "price_btc": 0.01562083,
-        "chg7d_btc": -17.4192,
-        "chg30d_btc": 29.8121
+        "price": 1354.18,
+        "mcap": 22976022750,
+        "chg24h": 4.04462,
+        "chg7d": -15.5839,
+        "chg30d": 32.7437,
+        "chg1y": 712.5821,
+        "price_btc": 0.01564165,
+        "chg7d_btc": -15.5839,
+        "chg30d_btc": 32.7437
       },
       {
         "symbol": "AAVE",
         "name": "Aave",
         "note": null,
         "vs_btc_focus": false,
-        "price": 180.2,
-        "mcap": 2781546995,
-        "chg24h": 0.1374,
-        "chg7d": 15.4781,
-        "chg30d": 37.9481,
-        "chg1y": -36.2408,
-        "price_btc": 0.00211013,
-        "chg7d_btc": 15.4781,
-        "chg30d_btc": 37.9481
+        "price": 179.54,
+        "mcap": 2771235923,
+        "chg24h": -0.5009,
+        "chg7d": 16.35,
+        "chg30d": 38.7194,
+        "chg1y": -36.4889,
+        "price_btc": 0.00207342,
+        "chg7d_btc": 16.35,
+        "chg30d_btc": 38.7194
       },
       {
         "symbol": "ONDO",
         "name": "Ondo",
         "note": null,
         "vs_btc_focus": false,
-        "price": 0.4923,
-        "mcap": 2396956556,
-        "chg24h": -0.23582,
-        "chg7d": -10.9093,
-        "chg30d": 38.5817,
-        "chg1y": -46.0391,
-        "price_btc": 5.77e-06,
-        "chg7d_btc": -10.9093,
-        "chg30d_btc": 38.5817
+        "price": 0.498478,
+        "mcap": 2427256064,
+        "chg24h": 0.06901,
+        "chg7d": -11.1652,
+        "chg30d": 39.6128,
+        "chg1y": -45.9864,
+        "price_btc": 5.76e-06,
+        "chg7d_btc": -11.1652,
+        "chg30d_btc": 39.6128
       },
       {
         "symbol": "MORPHO",
         "name": "Morpho",
         "note": null,
         "vs_btc_focus": false,
-        "price": 2.71,
-        "mcap": 1897994684,
-        "chg24h": -2.00311,
-        "chg7d": 0.643,
-        "chg30d": 7.3605,
-        "chg1y": 47.1665,
-        "price_btc": 3.175e-05,
-        "chg7d_btc": 0.643,
-        "chg30d_btc": 7.3605
+        "price": 2.74,
+        "mcap": 1915210010,
+        "chg24h": -0.61912,
+        "chg7d": 0.3621,
+        "chg30d": 6.241,
+        "chg1y": 45.9723,
+        "price_btc": 3.161e-05,
+        "chg7d_btc": 0.3621,
+        "chg30d_btc": 6.241
       },
       {
         "symbol": "AERO",
         "name": "Aerodrome",
         "note": null,
         "vs_btc_focus": false,
-        "price": 0.859373,
-        "mcap": 859598824,
-        "chg24h": 3.09574,
-        "chg7d": 0.3486,
-        "chg30d": 72.6244,
-        "chg1y": -23.1992,
-        "price_btc": 1.006e-05,
-        "chg7d_btc": 0.3486,
-        "chg30d_btc": 72.6244
+        "price": 0.88525,
+        "mcap": 885245069,
+        "chg24h": 3.43933,
+        "chg7d": 2.4627,
+        "chg30d": 74.1259,
+        "chg1y": -23.2275,
+        "price_btc": 1.023e-05,
+        "chg7d_btc": 2.4627,
+        "chg30d_btc": 74.1259
       },
       {
         "symbol": "CFG",
         "name": "Centrifuge",
         "note": null,
         "vs_btc_focus": false,
-        "price": 0.150954,
+        "price": 0.152485,
         "mcap": 0.0,
-        "chg24h": 0.01323,
-        "chg7d": -8.7605,
-        "chg30d": 50.0123,
-        "chg1y": -50.673,
-        "price_btc": 1.77e-06,
-        "chg7d_btc": -8.7605,
-        "chg30d_btc": 50.0123
+        "chg24h": 0.47022,
+        "chg7d": -7.7214,
+        "chg30d": 52.1625,
+        "chg1y": -50.0062,
+        "price_btc": 1.76e-06,
+        "chg7d_btc": -7.7214,
+        "chg30d_btc": 52.1625
       },
       {
         "symbol": "EVA",
         "name": "EverValue Coin",
         "note": "Lastreado em WBTC com burn vault — a leitura relevante é EVA/BTC.",
         "vs_btc_focus": true,
-        "price": 46.39,
+        "price": 46.78,
         "mcap": 0.0,
-        "chg24h": 0.35722,
-        "chg7d": 1.5231,
-        "chg30d": 7.5607,
-        "chg1y": 54.8373,
-        "price_btc": 0.00054293,
-        "chg7d_btc": 1.5231,
-        "chg30d_btc": 7.5607
+        "chg24h": 1.5654,
+        "chg7d": 2.4358,
+        "chg30d": 8.4145,
+        "chg1y": 53.4077,
+        "price_btc": 0.00054145,
+        "chg7d_btc": 2.4358,
+        "chg30d_btc": 8.4145
       }
     ],
     "dominance": {
-      "btc": 59.151413814116005,
-      "eth": 11.365179307788237
+      "btc": 59.302358710670525,
+      "eth": 11.382171376629916
     },
-    "total_mcap": 2893157631068.177,
-    "total_mcap_chg24h": -2.9624909995305773
+    "total_mcap": 2926710802457.2466,
+    "total_mcap_chg24h": -1.8484871456702305
   },
   "derivatives": {
-    "funding_rate_pct": 0.00466256361058,
+    "funding_rate_pct": 0.006587106221009999,
     "next_funding": "1791187200000",
-    "open_interest_btc": 28755.0280000001,
-    "open_interest_usd": 2456956114.4432087,
-    "mark_price": 85443.7
+    "open_interest_btc": 28616.716400000096,
+    "open_interest_usd": 2477538009.076248,
+    "mark_price": 86586.0
   },
   "fear_greed": {
     "value": 65,
@@ -271,9 +271,9 @@
     "previous": 67
   },
   "altseason": {
-    "value": 100.0,
-    "source": "próprio (11 alts)",
-    "note": "% da sua watchlist que superou o BTC em 30d"
+    "value": 59.0,
+    "source": "CMC (top 100)",
+    "note": "0-25 temporada do BTC · 75-100 temporada de alts"
   },
   "etf": {
     "BTC": {
@@ -814,21 +814,16 @@
         "tag": "ciclo",
         "temp": "neutro",
         "texto": "CBBI em 48/100 — meio da faixa, sem extremo de ciclo."
-      },
-      {
-        "tag": "alts",
-        "temp": "info",
-        "texto": "Altcoin Season em 100 — alts amplamente superando o BTC."
       }
     ],
     "disclaimer": "Leitura descritiva dos dados, não recomendação de compra ou venda."
   },
   "network": {
-    "block_height": 969895,
-    "hashrate": 952062877860455800000,
+    "block_height": 969917,
+    "hashrate": 958707950351596300000,
     "difficulty": 132716002350731.3,
-    "difficulty_change_pct": -4.472572899888128,
-    "blocks_to_retarget": 1817,
+    "difficulty_change_pct": -4.5739683324530045,
+    "blocks_to_retarget": 1795,
     "fee_fast": 1,
     "fee_economy": 1
   },
@@ -872,11 +867,11 @@
     },
     "Ações EUA (FMP)": {
       "ok": true,
-      "detail": "ok"
+      "detail": "cache (economia de quota)"
     },
     "ETFs EUA (FMP)": {
       "ok": true,
-      "detail": "ok"
+      "detail": "cache (economia de quota)"
     }
   }
 }
